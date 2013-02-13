@@ -168,7 +168,7 @@ module mips_core(/*AUTOARG*/
    // Instantiated the register file from reg_file.v here.
    // Don't forget to hookup the "halted" signal to trigger the register dump 
  
-	regfile(// Outputs
+	regfile file(// Outputs
    			.rs_data	(rs_data), 
 			.rt_data	(rt_data),
    			// Inputs
