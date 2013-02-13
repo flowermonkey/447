@@ -151,6 +151,8 @@ module mips_core(/*AUTOARG*/
    wire			ctrl_RI;		// From Decoder of mips_decode.v
    wire			ctrl_Sys;		// From Decoder of mips_decode.v
    wire			ctrl_we;		// From Decoder of mips_decode.v
+   wire 		regDest;
+   wire 		isImm;
    // End of automatics
 
    // Generate control signals
@@ -160,7 +162,8 @@ module mips_core(/*AUTOARG*/
 		       .ctrl_Sys	(ctrl_Sys),
 		       .ctrl_RI		(ctrl_RI),
 		       .alu__sel	(alu__sel[3:0]),
-		       // Inputs
+		       .regDest		(regDest),
+			   // Inputs
 		       .dcd_op		(dcd_op[5:0]),
 		       .dcd_funct2	(dcd_funct2[5:0]));
  
@@ -168,27 +171,36 @@ module mips_core(/*AUTOARG*/
    // Instantiated the register file from reg_file.v here.
    // Don't forget to hookup the "halted" signal to trigger the register dump 
  
+ 	wire [4:0] rd_num;
+
 	regfile file(// Outputs
    			.rs_data	(rs_data), 
 			.rt_data	(rt_data),
    			// Inputs
    			.rs_num		(dcd_rs), 
 			.rt_num		(dcd_rt), 
-			.rd_num		(dcd_rd), 
-			.rd_data	(rd_data), 
+			.rd_num		(rd_num), 
+			.rd_data	(alu__out), 
 			.rd_we		(ctrl_we), 
 			.clk		(clk), 
 			.rst_b		(rst_b), 
 			.halted		(halted));
-
+	
+	mux2_1 #(5) writeReg(rd_num,dcd_rt,dcd_rd,regDest);
+	
    // Execute
+ 
+   wire [4:0] alu__op2;
+
    mips_ALU ALU(.alu__out(alu__out), 
                 .alu__op1(rs_data),
-                .alu__op2(dcd_se_imm),
+                .alu__op2(alu__op2),
                 .alu__sel(alu__sel));
  
+   mux2_1 #(32) aluOpr2(alu__op2,dcd_se_imm,rt_data,isImm);
+   
    // Miscellaneous stuff (Exceptions, syscalls, and halt)
-/*   exception_unit EU(.exception_halt(exception_halt), .pc(pc), .rst_b(rst_b),
+   exception_unit EU(.exception_halt(exception_halt), .pc(pc), .rst_b(rst_b),
                      .clk(clk), .load_ex_regs(load_ex_regs),
                      .load_bva(load_bva), .load_bva_sel(load_bva_sel),
                      .cause(cause_code),
@@ -201,7 +213,7 @@ module mips_core(/*AUTOARG*/
                      .AdEL_data(1'b0),
                      .AdES(1'b0),
                      .CpU(1'b0));
-*/
+
    assign r_v0 = 32'h0a; // Good enough for now. To support syscall for real,
                          // you should read the syscall
                          // argument from $v0 of the register file 
@@ -232,8 +244,18 @@ module mips_ALU(alu__out, alu__op1, alu__op2, alu__sel);
    output [31:0] alu__out;
    input [31:0]  alu__op1, alu__op2;
    input [3:0]   alu__sel;
-
-   adder AdderUnit(alu__out, alu__op1, alu__op2, alu__sel[0]);
+   
+   always * begin
+   	case (alu__sel)
+		`ALU_ADD: alu__out = alu__op1 + alu__op2;
+		`ALU_SUB:  alu__out = alu__op1 - alu__op2;
+		`ALU_AND:  alu__out = alu__op1 & alu__op2;
+		`ALU_OR:  alu__out = alu__op1 | alu__op2;
+		`ALU_NOR:  alu__out = ~(alu__op1 | alu__op2);
+		`ALU_XOR:  alu__out = alu__op1 ^ alu__op2;
+		default:  alu__out = alu__out;
+	endcase 
+   end
 
 endmodule
 
@@ -283,6 +305,27 @@ module adder(out, in1, in2, sub);
 
 endmodule // adder
 
+
+////
+//// 2:1 mux
+////
+//// out (output) - selected mux value
+//// in1 (input)  - Value1
+//// in2 (input)  - Value2
+//// sel (input)  - select line
+////
+module mux2_1 (out, in1, in2, sel);
+	
+	parameter 
+			width = 32;
+
+	output [width-1:0] out;
+	input [width-1:0]  in1, in2;
+	input 		  sel;
+
+	assign 		  out = sel ? in1 : in2;
+
+endmodule // mux2_1
 
 ////
 //// add_const: An adder that adds a fixed constant value
