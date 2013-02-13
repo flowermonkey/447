@@ -1,0 +1,23 @@
+ncvlog: 08.20-s015: (c) Copyright 1995-2009 Cadence Design Systems, Inc.
+DEFINE analogLib $CDSHOME/tools/dfII/etc/cdslib/artist/analogLib
+|
+ncvlog: *W,DLCPTH (/afs/ece.cmu.edu/class/ece320/F10/gpdk090_v4.5/cds.lib.oa22,1): cds.lib Invalid path '$CDSHOME/tools/dfII/etc/cdslib/artist/analogLib' (cds.lib command ignored).
+DEFINE US_8ths   $CDSHOME/tools/dfII/etc/cdslib/sheets/US_8ths
+|
+ncvlog: *W,DLCPTH (/afs/ece.cmu.edu/class/ece320/F10/gpdk090_v4.5/cds.lib.oa22,2): cds.lib Invalid path '$CDSHOME/tools/dfII/etc/cdslib/sheets/US_8ths' (cds.lib command ignored).
+DEFINE basic     $CDSHOME/tools/dfII/etc/cdslib/basic
+|
+ncvlog: *W,DLCPTH (/afs/ece.cmu.edu/class/ece320/F10/gpdk090_v4.5/cds.lib.oa22,3): cds.lib Invalid path '$CDSHOME/tools/dfII/etc/cdslib/basic' (cds.lib command ignored).
+ncvlog: *W,DLNOHV: Unable to find an 'hdl.var' file to load in.
+TOOL:	ncvlog	08.20-s015: Started on Feb 12, 2013 at 19:00:06 EST
+ncvlog
+    -linedebug
+    -messages
+    RF_TB.v
+    RF.v
+
+file: RF_TB.v
+module RF_TB();
+     |
+ncvlog: *F,NOWORK (RF_TB.v,1|5): no working library defined.
+TOOL:	ncvlog	08.20-s015: Exiting on Feb 12, 2013 at 19:00:09 EST  (total: 00:00:03)
