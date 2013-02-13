@@ -188,7 +188,7 @@ module mips_core(/*AUTOARG*/
                 .alu__sel(alu__sel));
  
    // Miscellaneous stuff (Exceptions, syscalls, and halt)
-/*   exception_unit EU(.exception_halt(exception_halt), .pc(pc), .rst_b(rst_b),
+   exception_unit EU(.exception_halt(exception_halt), .pc(pc), .rst_b(rst_b),
                      .clk(clk), .load_ex_regs(load_ex_regs),
                      .load_bva(load_bva), .load_bva_sel(load_bva_sel),
                      .cause(cause_code),
@@ -201,7 +201,7 @@ module mips_core(/*AUTOARG*/
                      .AdEL_data(1'b0),
                      .AdES(1'b0),
                      .CpU(1'b0));
-*/
+
    assign r_v0 = 32'h0a; // Good enough for now. To support syscall for real,
                          // you should read the syscall
                          // argument from $v0 of the register file 
