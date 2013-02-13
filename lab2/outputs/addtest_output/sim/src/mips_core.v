@@ -198,7 +198,7 @@ module mips_core(/*AUTOARG*/
                 .alu__op2(alu__op2),
                 .alu__sel(alu__sel));
  
-   mux2_1 #(32) aluOpr2(alu__op2, dcd_se_imm, rt_data, isImm);
+   mux2_1 #(32) aluOpr2(alu__op2,dcd_se_imm,rt_data,isImm);
    
    // Miscellaneous stuff (Exceptions, syscalls, and halt)
    exception_unit EU(.exception_halt(exception_halt), .pc(pc), .rst_b(rst_b),
