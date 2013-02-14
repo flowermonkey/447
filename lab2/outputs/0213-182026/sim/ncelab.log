@@ -1,0 +1,58 @@
+ncelab: 08.20-s015: (c) Copyright 1995-2009 Cadence Design Systems, Inc.
+TOOL:	ncelab	08.20-s015: Started on Feb 13, 2013 at 18:20:27 EST
+ncelab
+    +access+rwc
+    -messages
+    worklib.testbench
+
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.add_const:module <0x688b9600>
+			streams:   1, words:   125
+		worklib.clock:module <0x62521b61>
+			streams:   2, words:   699
+		worklib.exception_unit:module <0x14ef46fd>
+			streams:   6, words:  5958
+		worklib.mips_ALU:module <0x7927be04>
+			streams:   1, words:  1398
+		worklib.mips_core:module <0x676d4a74>
+			streams:  34, words:  7504
+		worklib.mips_decode:module <0x46c4c1ad>
+			streams:   1, words:  7582
+		worklib.mips_mem:module <0x746a2a4b>
+			streams:  92, words: 40181
+		worklib.mux2_1:module <0x3646e2c9>
+			streams:   1, words:   298
+		worklib.mux2_1:module <0x5c422ad8>
+			streams:   1, words:   312
+		worklib.regfile:module <0x4afce500>
+			streams:   6, words:  6354
+		worklib.register:module <0x0b14b035>
+			streams:   3, words:   716
+		worklib.register:module <0x0b61f7a0>
+			streams:   3, words:   714
+		worklib.register:module <0x55a7d938>
+			streams:   3, words:   734
+		worklib.register:module <0x5e8c907e>
+			streams:   3, words:   716
+		worklib.syscall_unit:module <0x68385ba3>
+			streams:   2, words:   743
+		worklib.testbench:module <0x0913dd18>
+			streams:   8, words:  1861
+	Loading native compiled code:     .................... Done
+	Building instance specific data structures.
+	Design hierarchy summary:
+		              Instances  Unique
+		Modules:             18      12
+		Registers:           33      28
+		Scalar wires:        33       -
+		Vectored wires:      41       -
+		Named events:         2       2
+		Always blocks:       21      16
+		Initial blocks:       3       3
+		Cont. assignments:   34      33
+		Pseudo assignments:  16      16
+	Writing initial simulation snapshot: worklib.testbench:module
+TOOL:	ncelab	08.20-s015: Exiting on Feb 13, 2013 at 18:20:27 EST  (total: 00:00:00)

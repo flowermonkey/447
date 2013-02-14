@@ -79,11 +79,6 @@ module mips_core(/*AUTOARG*/
    output        halted;
    input         rst_b;
 
-   // Forced interface signals -- required for synthesis to work OK.
-   // This is probably not what you want!
-   assign        mem_addr = 0;
-   assign        mem_data_in = mem_data_out;
-   assign        mem_write_en = 4'b0;
 
    // Internal signals
    wire [31:0]   pc, nextpc, nextnextpc;
@@ -92,6 +87,7 @@ module mips_core(/*AUTOARG*/
    wire [31:0]   rt_data, rs_data, rd_data, alu__out, r_v0;
    wire [31:0]   epc, cause, bad_v_addr;
    wire [4:0]    cause_code;
+
 
    // Decode signals
    wire [31:0]   dcd_se_imm, dcd_se_offset, dcd_e_imm, dcd_se_mem_offset;
@@ -153,7 +149,16 @@ module mips_core(/*AUTOARG*/
    wire			ctrl_we;		// From Decoder of mips_decode.v
    wire 		regDest;
    wire 		isImm;
+   wire 		isShift;
+   wire 		left;
+   wire 		arith;
+   wire 		mem_we;	//Control Signal from Decoder outputs
+   wire			memToReg;
    // End of automatics
+
+   assign        mem_addr = alu__out;
+   assign        mem_data_in = rt_data;
+   assign        mem_write_en = mem_we;
 
    // Generate control signals
    mips_decode Decoder(/*AUTOINST*/
@@ -164,6 +169,11 @@ module mips_core(/*AUTOARG*/
 		       .alu__sel	(alu__sel[3:0]),
 		       .regDest		(regDest),
 			   .isImm		(isImm),
+			   .isShift		(isShift),
+			   .leftShift   (left),
+			   .arithShift  (arith),
+			   .mem_we		(mem_we),
+			   .memToReg	(memToReg),
 			   // Inputs
 		       .dcd_op		(dcd_op[5:0]),
 		       .dcd_funct2	(dcd_funct2[5:0]));
@@ -173,6 +183,7 @@ module mips_core(/*AUTOARG*/
    // Don't forget to hookup the "halted" signal to trigger the register dump 
  
  	wire [4:0] rd_num;
+    wire [31:0] shiftVal, memData;	
 
 	regfile file(// Outputs
    			.rs_data	(rs_data), 
@@ -181,25 +192,32 @@ module mips_core(/*AUTOARG*/
    			.rs_num		(dcd_rs), 
 			.rt_num		(dcd_rt), 
 			.rd_num		(rd_num), 
-			.rd_data	(alu__out), 
+			.rd_data	(rd_data), 
 			.rd_we		(ctrl_we), 
 			.clk		(clk), 
 			.rst_b		(rst_b), 
 			.halted		(halted));
 	
 	mux2_1 #(5) writeReg(rd_num,dcd_rt,dcd_rd,regDest);
+	mux3_1 #(32) writeData(rd_data,alu__out, mem_data_out,shiftVal,
+					{isShift,memToReg});
 	
    // Execute
  
-   wire [4:0] alu__op2;
+   wire [31:0] alu__op2;
 
    mips_ALU ALU(.alu__out(alu__out), 
                 .alu__op1(rs_data),
                 .alu__op2(alu__op2),
                 .alu__sel(alu__sel));
  
-   mux2_1 #(32) aluOpr2(alu__op2,dcd_se_imm,rt_data,isImm);
-   
+   mux2_1 #(32) aluOpr2(alu__op2, dcd_se_imm, rt_data, isImm);
+
+   wire [4:0] sa;
+
+   shift_reg sr(shiftVal, rt_data, sa, left, arith);
+
+   mux2_1 #(5) shiftBy(sa,dcd_shamt,rs_data[4:0],isImm);
    // Miscellaneous stuff (Exceptions, syscalls, and halt)
    exception_unit EU(.exception_halt(exception_halt), .pc(pc), .rst_b(rst_b),
                      .clk(clk), .load_ex_regs(load_ex_regs),
@@ -290,6 +308,35 @@ module register(q, d, clk, enable, rst_b);
 endmodule // register
 
 
+//// shift register: A register which shifts it input sa times
+////
+//// q      (output) - Current value of register
+//// d      (input)  - Next value of register
+//// clk    (input)  - Clock (positive edge-sensitive)
+//// enable (input)  - Load new value
+//// reset  (input)  - System reset
+////
+module shift_reg(q, d, sa, left, arith);
+
+   output [31:0] q;
+   input [31:0]  d;
+   input [4:0] 	 sa;
+   input         left, arith;
+   
+   reg [31:0]    q,mask;
+
+   always @ * begin
+     if (left)
+       q = d<<sa;
+	 else
+	   q = d>>sa;
+	
+	 mask = ~((32'h8000_0000)>>sa);
+	 q = (arith) ? q : q&mask;  
+   end
+endmodule // shift_reg
+
+
 ////
 //// adder
 ////
@@ -328,6 +375,37 @@ module mux2_1 (out, in1, in2, sel);
 	assign 		  out = sel ? in1 : in2;
 
 endmodule // mux2_1
+
+////
+//// 3:1 mux
+////
+//// out (output) - selected mux value
+//// in1 (input)  - Value1
+//// in2 (input)  - Value2
+//// in3 (input)  - Value3
+//// sel (input)  - select line
+////
+module mux3_1 (out, in1, in2, in3, sel);
+	
+	parameter 
+			width = 32;
+
+	output [width-1:0] out;
+	reg [width-1:0] out;
+	input [width-1:0]  in1, in2, in3;
+	input [1:0]		   sel;
+
+	always @ * begin
+		if(sel==2'b0)
+			out = in1;
+		else if(sel==2'b1)
+			out = in2;
+		else if (sel==2'b10)
+			out = in3;
+		else
+			out = 'hx;
+	end
+endmodule // mux3_1
 
 ////
 //// add_const: An adder that adds a fixed constant value

@@ -53,13 +53,15 @@
 ////
 module mips_decode(/*AUTOARG*/
    // Outputs
-   ctrl_we, ctrl_Sys, ctrl_RI, regDest, alu__sel,isImm,
+   ctrl_we, ctrl_Sys, ctrl_RI, regDest, alu__sel,isImm,isShift,
+   leftShift, arithShift,mem_we,memToReg,
    // Inputs
    dcd_op, dcd_funct2
    );
 
    input       [5:0] dcd_op, dcd_funct2;
-   output reg        ctrl_we, ctrl_Sys, ctrl_RI, regDest, isImm;
+   output reg        ctrl_we, ctrl_Sys, ctrl_RI, regDest, isImm, isShift,
+   					 leftShift, arithShift, mem_we, memToReg;
    output reg  [3:0] alu__sel;
 
 	always @(*) begin
@@ -69,6 +71,11 @@ module mips_decode(/*AUTOARG*/
 		ctrl_RI = 1'b0;
 		regDest = 1'bx;
 		isImm = 1'bx;
+		isShift = 1'b0;
+		leftShift = 1'bx;
+		arithShift = 1'bx;
+		mem_we = 1'b0;
+		memToReg = 1'b0;
 		case(dcd_op)
 			`OP_OTHER0:
 				case(dcd_funct2)
@@ -130,6 +137,60 @@ module mips_decode(/*AUTOARG*/
 						regDest = 1'b0;
 						isImm = 1'b0;	
 					end
+					`OP0_SLL:
+					begin
+						isShift = 1'b1;
+						leftShift = 1'b1;
+						arithShift = 1'b0;
+						regDest = 1'd0;
+						isImm = 1'b1;
+						ctrl_we = 1'b1;
+					end
+					`OP0_SLLV:
+					begin
+						isShift = 1'b1;
+						leftShift = 1'b1;
+						arithShift = 1'b0;
+						regDest = 1'd0;
+						isImm = 1'b0;
+						ctrl_we = 1'b1;
+					end
+					`OP0_SRA:
+					begin
+						isShift = 1'b1;
+						leftShift = 1'b0;
+						arithShift = 1'b1;
+						regDest = 1'd0;
+						isImm = 1'b1;
+						ctrl_we = 1'b1;
+					end
+					`OP0_SRAV:
+					begin
+						isShift = 1'b1;
+						leftShift = 1'b0;
+						arithShift = 1'b1;
+						regDest = 1'd0;
+						isImm = 1'b0;
+						ctrl_we = 1'b1;
+					end
+					`OP0_SRL:
+					begin
+						isShift = 1'b1;
+						leftShift = 1'b0;
+						arithShift = 1'b0;
+						regDest = 1'd0;
+						isImm = 1'b1;
+						ctrl_we = 1'b1;
+					end
+					`OP0_SRLV:
+					begin
+						isShift = 1'b1;
+						leftShift = 1'b0;
+						arithShift = 1'b0;
+						regDest = 1'd0;
+						isImm = 1'b0;
+						ctrl_we = 1'b1;
+					end
 					default:
 						ctrl_RI = 1'b1;
 				endcase 
@@ -167,6 +228,14 @@ module mips_decode(/*AUTOARG*/
 				ctrl_we = 1'b1;
 				regDest = 1'b1;
 				isImm = 1'b1;	
+			end
+			`OP_LUI:
+			begin
+				alu__sel = `ALU_ADD;
+				ctrl_we = 1'b1;
+				regDest = 1'b1;
+				memToReg = 1'b0;
+				isImm = 1'b1;
 			end
 			default:
 			begin
