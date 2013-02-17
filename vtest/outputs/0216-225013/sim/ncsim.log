@@ -1,0 +1,73 @@
+ncsim: 08.20-s015: (c) Copyright 1995-2009 Cadence Design Systems, Inc.
+ncsim> database -open -shm -default waveforms
+Created default SHM database waveforms
+ncsim> probe -shm -create -depth all -all 
+Created probe 1
+ncsim> run 
+Simulation interrupted at 4498504300 NS + 0
+./src/testbench.v:103      #halfPeriod clockSignal = ~clockSignal;
+ncsim> ls
+447ncsim.tcl
+addi.reg
+addi.s
+addiu.reg
+addiu.s
+add.reg
+add.s
+addu.reg
+addu.s
+andi.reg
+andi.s
+and.reg
+and.s
+beq.reg
+beq.s
+bgezal0.reg
+bgezal0.s
+bgezal1.reg
+bgezal1.s
+bgez.reg
+bgez.s
+bgtz.reg
+bgtz.s
+blez.reg
+blez.s
+bltzal0.reg
+bltzal0.s
+bltzal1.reg
+bltzal1.s
+bltz.reg
+bltz.s
+bne.reg
+bne.s
+INCA_libs
+jal.reg
+jalr.reg
+jalr.s
+jal.s
+j.reg
+jr.reg
+jr.s
+j.s
+lb.reg
+lb.s
+lbu.reg
+lbu.s
+lh.s
+mem.data.dat
+mem.kdata.dat
+mem.ktext.dat
+mem.stack.dat
+mem.text.dat
+ncelab.log
+ncsim.key
+ncsim.log
+ncsim.tcl
+ncvlog.log
+reg.dat
+regdump.txt
+src
+waveforms.shm
+ncsim> ^C
+ncsim> 
+ncsim> exit

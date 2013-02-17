@@ -1,0 +1,70 @@
+ncelab: 08.20-s015: (c) Copyright 1995-2009 Cadence Design Systems, Inc.
+TOOL:	ncelab	08.20-s015: Started on Feb 16, 2013 at 22:53:57 EST
+ncelab
+    +access+rwc
+    -messages
+    worklib.testbench
+
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.add_const:module <0x688b9600>
+			streams:   1, words:   125
+		worklib.clock:module <0x62521b61>
+			streams:   2, words:   699
+		worklib.exception_unit:module <0x14ef46fd>
+			streams:   6, words:  5958
+		worklib.memLoader:module <0x3453815a>
+			streams:   1, words:  3624
+		worklib.memdecoder:module <0x1ffd26d9>
+			streams:   1, words:  4258
+		worklib.mips_ALU:module <0x16d20728>
+			streams:   1, words:  2998
+		worklib.mips_core:module <0x5259e936>
+			streams:  44, words:  7152
+		worklib.mips_decode:module <0x19d21734>
+			streams:   1, words: 33274
+		worklib.mips_mem:module <0x746a2a4b>
+			streams:  92, words: 40156
+		worklib.mux2_1:module <0x3646e2c9>
+			streams:   1, words:   298
+		worklib.mux4_1:module <0x0de0fc44>
+			streams:   1, words:   950
+		worklib.mux4_1:module <0x0de1790c>
+			streams:   1, words:   782
+		worklib.mux4_1:module <0x619a4ae4>
+			streams:   1, words:   915
+		worklib.mux4_1:module <0x619ac7ac>
+			streams:   1, words:   747
+		worklib.regfile:module <0x6adb3479>
+			streams:   7, words:  7243
+		worklib.register:module <0x0b14b035>
+			streams:   3, words:   716
+		worklib.register:module <0x0b61f7a0>
+			streams:   3, words:   714
+		worklib.register:module <0x55a7d938>
+			streams:   3, words:   734
+		worklib.register:module <0x5e8c907e>
+			streams:   3, words:   716
+		worklib.shift_reg:module <0x53a80bc8>
+			streams:   1, words:   882
+		worklib.syscall_unit:module <0x68385ba3>
+			streams:   2, words:   743
+		worklib.testbench:module <0x0913dd18>
+			streams:   8, words:  1861
+	Loading native compiled code:     .................... Done
+	Building instance specific data structures.
+	Design hierarchy summary:
+		              Instances  Unique
+		Modules:             28      16
+		Registers:           52      44
+		Scalar wires:        43       -
+		Vectored wires:      62       -
+		Named events:         2       2
+		Always blocks:       27      19
+		Initial blocks:       4       4
+		Cont. assignments:   36      32
+		Pseudo assignments:  28      28
+	Writing initial simulation snapshot: worklib.testbench:module
+TOOL:	ncelab	08.20-s015: Exiting on Feb 16, 2013 at 22:53:58 EST  (total: 00:00:01)
