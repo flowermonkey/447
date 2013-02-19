@@ -1,5 +1,5 @@
 ncvlog: 08.20-s015: (c) Copyright 1995-2009 Cadence Design Systems, Inc.
-TOOL:	ncvlog	08.20-s015: Started on Feb 16, 2013 at 22:10:45 EST
+TOOL:	ncvlog	08.20-s015: Started on Feb 19, 2013 at 15:56:15 EST
 ncvlog
     -linedebug
     -messages
@@ -53,4 +53,4 @@ file: src/testbench.v
 		errors: 0, warnings: 0
 	module worklib.clock
 		errors: 0, warnings: 0
-TOOL:	ncvlog	08.20-s015: Exiting on Feb 16, 2013 at 22:10:45 EST  (total: 00:00:00)
+TOOL:	ncvlog	08.20-s015: Exiting on Feb 19, 2013 at 15:56:15 EST  (total: 00:00:00)

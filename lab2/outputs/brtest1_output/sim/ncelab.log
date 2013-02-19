@@ -1,5 +1,5 @@
 ncelab: 08.20-s015: (c) Copyright 1995-2009 Cadence Design Systems, Inc.
-TOOL:	ncelab	08.20-s015: Started on Feb 16, 2013 at 22:10:45 EST
+TOOL:	ncelab	08.20-s015: Started on Feb 19, 2013 at 15:56:15 EST
 ncelab
     +access+rwc
     -messages
@@ -20,11 +20,11 @@ ncelab
 		worklib.memdecoder:module <0x1ffd26d9>
 			streams:   1, words:  4258
 		worklib.mips_ALU:module <0x16d20728>
-			streams:   1, words:  2998
-		worklib.mips_core:module <0x5259e936>
-			streams:  44, words:  7152
-		worklib.mips_decode:module <0x19d21734>
-			streams:   1, words: 33274
+			streams:   1, words:  3251
+		worklib.mips_core:module <0x2f8cde8f>
+			streams:  44, words:  7116
+		worklib.mips_decode:module <0x27019614>
+			streams:   1, words: 33598
 		worklib.mips_mem:module <0x746a2a4b>
 			streams:  92, words: 40181
 		worklib.mux2_1:module <0x3646e2c9>
@@ -58,8 +58,8 @@ ncelab
 	Design hierarchy summary:
 		              Instances  Unique
 		Modules:             28      16
-		Registers:           51      43
-		Scalar wires:        43       -
+		Registers:           52      44
+		Scalar wires:        44       -
 		Vectored wires:      62       -
 		Named events:         2       2
 		Always blocks:       27      19
@@ -67,4 +67,4 @@ ncelab
 		Cont. assignments:   36      32
 		Pseudo assignments:  28      28
 	Writing initial simulation snapshot: worklib.testbench:module
-TOOL:	ncelab	08.20-s015: Exiting on Feb 16, 2013 at 22:10:45 EST  (total: 00:00:00)
+TOOL:	ncelab	08.20-s015: Exiting on Feb 19, 2013 at 15:56:15 EST  (total: 00:00:00)

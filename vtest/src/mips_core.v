@@ -308,10 +308,10 @@ module mips_ALU(alu__out, alu__op1, alu__op2, alu__sel);
 		`ALU_SLTU:  alu__out = ($unsigned(alu__op1) < $unsigned(alu__op2));
 		`ALU_BEQ:   alu__out = (alu__op1 == alu__op2);
 		`ALU_BNE:   alu__out = (alu__op1 != alu__op2);
-		`ALU_BLE:   alu__out = (alu__op1 <= alu__op2);
-		`ALU_BGE:   alu__out = (alu__op1 >= alu__op2);
-		`ALU_BL:   	alu__out = (alu__op1 < alu__op2);
-		`ALU_BG:   	alu__out = (alu__op1 > alu__op2);
+		`ALU_BLE:   alu__out = (alu__op1[31] == 1 || alu__op1==0);
+		`ALU_BGE:   alu__out = (alu__op1[31] == 0 || alu__op1==0);
+		`ALU_BL:   	alu__out = (alu__op1[31] == 1);
+		`ALU_BG:   	alu__out = (alu__op1[31] == 0 && alu__op1 !=0);
 		default:  alu__out = alu__out;
 	endcase 
    end

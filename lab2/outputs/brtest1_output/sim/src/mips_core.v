@@ -93,6 +93,7 @@ module mips_core(/*AUTOARG*/
    wire		   	 isJal;
    wire	[1:0] 	 regDest;
    wire		   	 brnch;
+   wire		   	 isALU;
    wire		   	 isBranch; //From Decoder of mips_decode.v
 
 
@@ -108,15 +109,15 @@ module mips_core(/*AUTOARG*/
    // PC Management
    register #(32, text_start) PCReg(pc, jalPC, clk, ~internal_halt, rst_b);
    mux4_1 #(32) nextPC(jalPC, nextpc, {pc[31:28],dcd_target,2'd0}, 
-   						alu__out, nextpc+dcd_se_offset, {(~regDest[0]||brnch),(isJal||brnch)});
+   						alu__out, nextpc+dcd_se_offset, {(isALU||brnch),(isJal||brnch)});
    register #(32, text_start+4) PCReg2(nextpc, nextJalPC, clk,
                                        ~internal_halt, rst_b);
    mux2_1 #(32) nextnextPC(nextJalPC,jalPC+4,nextnextpc,
-  							({(~regDest[0]||brnch),(isJal||brnch)} > 2'b0));
+  							({(isALU||brnch),(isJal||brnch)} > 2'b0));
    add_const #(4) NextPCAdder(nextnextpc, nextpc);
    assign        inst_addr = pc[31:2];
    
-   assign 		 brnch = isBranch && alu__out;
+   assign 		 brnch = isBranch && alu__out[0];
    // Instruction decoding
    assign        dcd_op = inst[31:26];    // Opcode
    assign        dcd_rs = inst[25:21];    // rs field
@@ -195,6 +196,7 @@ module mips_core(/*AUTOARG*/
 		       .alu__sel	(alu__sel[3:0]),
 		       .isJal		(isJal),
 		       .isBranch	(isBranch),
+		       .isALU		(isALU),
 		       // Inputs
 		       .dcd_op		(dcd_op[5:0]),
 		       .dcd_funct2	(dcd_funct2[5:0]),
@@ -306,10 +308,10 @@ module mips_ALU(alu__out, alu__op1, alu__op2, alu__sel);
 		`ALU_SLTU:  alu__out = ($unsigned(alu__op1) < $unsigned(alu__op2));
 		`ALU_BEQ:   alu__out = (alu__op1 == alu__op2);
 		`ALU_BNE:   alu__out = (alu__op1 != alu__op2);
-		`ALU_BLE:   alu__out = (alu__op1 <= alu__op2);
-		`ALU_BGE:   alu__out = (alu__op1 >= alu__op2);
-		`ALU_BL:   alu__out = (alu__op1 < alu__op2);
-		`ALU_BG:   alu__out = (alu__op1 > alu__op2);
+		`ALU_BLE:   alu__out = (alu__op1[31] == 1 || alu__op1==0);
+		`ALU_BGE:   alu__out = (alu__op1[31] == 0 || alu__op1==0);
+		`ALU_BL:   	alu__out = (alu__op1[31] == 1);
+		`ALU_BG:   	alu__out = (alu__op1[31] == 0 && alu__op1 !=0);
 		default:  alu__out = alu__out;
 	endcase 
    end
