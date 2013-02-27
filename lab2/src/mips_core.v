@@ -302,7 +302,7 @@ module mips_ALU(alu__out, alu__op1, alu__op2, alu__sel);
 		`ALU_SUB:   alu__out = alu__op1 - alu__op2;
 		`ALU_AND:   alu__out = alu__op1 & alu__op2;
 		`ALU_OR:    alu__out = alu__op1 | alu__op2;
-		`ALU_NOR:   alu__out = ~(alu__op1 | alu__op2);
+        `ALU_NOR:   alu__out = ~(alu__op1 | alu__op2);
 		`ALU_XOR:   alu__out = alu__op1 ^ alu__op2;
 		`ALU_SLT:   alu__out = ($signed(alu__op1) < $signed(alu__op2));
 		`ALU_SLTU:  alu__out = ($unsigned(alu__op1) < $unsigned(alu__op2));

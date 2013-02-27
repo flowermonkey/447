@@ -1,9 +1,0 @@
-ncsim: 08.20-s015: (c) Copyright 1995-2009 Cadence Design Systems, Inc.
-ncsim> database -open -shm -default waveforms
-Created default SHM database waveforms
-ncsim> probe -shm -create -depth all -all 
-Created probe 1
-ncsim> run 
-Simulation interrupted at 1495259850 NS + 0
-./src/testbench.v:103      #halfPeriod clockSignal = ~clockSignal;
-ncsim> exit
