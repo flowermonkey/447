@@ -79,7 +79,6 @@ module mips_core(/*AUTOARG*/
    output        halted;
    input         rst_b;
 
-
    // Internal signals
    wire [31:0]   pc, nextpc, nextnextpc;
    wire          exception_halt, syscall_halt, internal_halt;
@@ -87,15 +86,7 @@ module mips_core(/*AUTOARG*/
    wire [31:0]   rt_data, rs_data, rd_data, alu__out, r_v0;
    wire [31:0]   epc, cause, bad_v_addr;
    wire [4:0]    cause_code;
-   
-   wire [31:0]   jalPC;
-   wire [31:0]   nextJalPC;
-   wire		   	 isJal;
-   wire	[1:0] 	 regDest;
-   wire		   	 brnch;
-   wire		   	 isALU;
-   wire		   	 isBranch; //From Decoder of mips_decode.v
-
+   wire          stall; 
 
    // Decode signals
    wire [31:0]   dcd_se_imm, dcd_se_offset, dcd_e_imm, dcd_se_mem_offset;
@@ -105,56 +96,67 @@ module mips_core(/*AUTOARG*/
    wire [25:0]   dcd_target;
    wire [19:0]   dcd_code;
    wire          dcd_bczft;
+    
+   // Pipeline signals
+   wire [31:0]   pip_inst; 
+   wire          pip_ctrl_we0,pip_ctrl_we1,pip_ctrl_we2;
+   wire          pip_ctrl_Sys0,pip_ctrl_Sys1,pip_ctrl_Sys2;
+   wire [1:0]    pip_regDest0,pip_regDest1,pip_regDest2;
+   wire          pip_isImm0,pip_isImm1,pip_isImm2;
+   wire          pip_isShift0,pip_isShift1,pip_isShift2;
+   wire          pip_leftShift0,pip_leftShift1,pip_leftShift2;
+   wire          pip_arithShift0,pip_arithShift1,pip_arithShift2;
+   wire          pip_en_memLd0,pip_en_memLd1;
+   wire          pip_memToReg0,pip_memToReg1,memToReg2;
+   wire          pip_isLui0,pip_isLui1,pip_isLui2;
+   wire          pip_isSe;
+   wire [2:0]    pip_ldType0, pip_ldType1;
+   wire [3:0]    pip_alu__sel;
+   wire [31:0]   pip_rs_data0, pip_rs_data1,pip_rs_data2;
+   wire [31:0]   pip_rt_data0, pip_rt_data1,pip_rt_data2;
+   wire [31:0]   pip_dcd_e_imm;
+   wire [31:0]   pip_dcd_se_imm;
+   wire [4:0]    pip_dcd_shamt0,pip_dcd_shamt1,pip_dcd_shamt2;
+   wire [31:0]   pip_alu__out0,pip_alu__out1;
+   wire [4:0]    pip_dcd_rd0,pip_dcd_rd1,pip_dcd_rd2;
+   wire [4:0]    pip_dcd_rt0,pip_dcd_rt1,pip_dcd_rt2;
+   wire [31:0]   pip_ld_mem_data;
+   wire [31:0]   pip_memData;
+
+   // Fetch
    
    // PC Management
-   register #(32, text_start) PCReg(pc, jalPC, clk, ~internal_halt, rst_b);
-   mux4_1 #(32) nextPC(jalPC, nextpc, {pc[31:28],dcd_target,2'd0}, 
-   						alu__out, nextpc+dcd_se_offset, {(isALU||brnch),(isJal||brnch)});
-   register #(32, text_start+4) PCReg2(nextpc, nextJalPC, clk,
-                                       ~internal_halt, rst_b);
-   mux2_1 #(32) nextnextPC(nextJalPC,jalPC+4,nextnextpc,
-  							({(isALU||brnch),(isJal||brnch)} > 2'b0));
+   register #(32, text_start) PCReg(pc, nextpc, clk, ~stall,
+                                       1'b0, rst_b);
+   register #(32, text_start+4) PCReg2(nextpc, nextnextpc, clk,
+                                       ~stall,1'b0, rst_b);
    add_const #(4) NextPCAdder(nextnextpc, nextpc);
    assign        inst_addr = pc[31:2];
    
-   assign 		 brnch = isBranch && alu__out[0];
+   //FETCH-DECODE PIPLELINE REGISTERS
+   register #(32, 32'h14000000) FT_ID_Reg0(pip_inst,inst,clk, ~stall, 1'b0, rst_b); 
+
    // Instruction decoding
-   assign        dcd_op = inst[31:26];    // Opcode
-   assign        dcd_rs = inst[25:21];    // rs field
-   assign        dcd_rt = inst[20:16];    // rt field
-   assign        dcd_rd = inst[15:11];    // rd field
-   assign        dcd_shamt = inst[10:6];  // Shift amount
-   assign        dcd_bczft = inst[16];    // bczt or bczf?
-   assign        dcd_funct1 = inst[4:0];  // Coprocessor 0 function field
-   assign        dcd_funct2 = inst[5:0];  // funct field; secondary opcode
-   assign        dcd_offset = inst[15:0]; // offset field
+   assign        dcd_op = pip_inst[31:26];    // Opcode
+   assign        dcd_rs = pip_inst[25:21];    // rs field
+   assign        dcd_rt = pip_inst[20:16];    // rt field
+   assign        dcd_rd = pip_inst[15:11];    // rd field
+   assign        dcd_shamt = pip_inst[10:6];  // Shift amount
+   assign        dcd_bczft = pip_inst[16];    // bczt or bczf?
+   assign        dcd_funct1 = pip_inst[4:0];  // Coprocessor 0 function field
+   assign        dcd_funct2 = pip_inst[5:0];  // funct field; secondary opcode
+   assign        dcd_offset = pip_inst[15:0]; // offset field
         // Sign-extended offset for branches
    assign        dcd_se_offset = { {14{dcd_offset[15]}}, dcd_offset, 2'b00 };
         // Sign-extended offset for load/store
    assign        dcd_se_mem_offset = { {16{dcd_offset[15]}}, dcd_offset };
-   assign        dcd_imm = inst[15:0];        // immediate field
+   assign        dcd_imm = pip_inst[15:0];        // immediate field
    assign        dcd_e_imm = { 16'h0, dcd_imm };  // zero-extended immediate
         // Sign-extended immediate
    assign        dcd_se_imm = { {16{dcd_imm[15]}}, dcd_imm };
-   assign        dcd_target = inst[25:0];     // target field
-   assign        dcd_code = inst[25:6];       // Breakpoint code
-/*
-   // synthesis translate_off
-   always @(posedge clk) begin
-     // useful for debugging, you will want to comment this out for long programs
-     if (rst_b) begin
-       $display ( "=== Simulation Cycle %d ===", $time );
-       $display ( "[pc=%x, inst=%x] [op=%x, rs=%d, rt=%d, rd=%d, imm=%x, f2=%x] [reset=%d, halted=%d]",
-                   pc, inst, dcd_op, dcd_rs, dcd_rt, dcd_rd, dcd_imm, dcd_funct2, ~rst_b, halted);
-     end
-   end
-   */
-   // synthesis translate_on
+   assign        dcd_target = pip_inst[25:0];     // target field
+   assign        dcd_code = pip_inst[25:6];       // Breakpoint code
 
-   // Let Verilog-Mode pipe wires through for us.  This is another example
-   // of Verilog-Mode's power -- undeclared nets get AUTOWIREd up when we
-   // run 'make auto'.
-   
    /*AUTOWIRE*/
    // Beginning of automatic wires (for undeclared instantiated-module outputs)
    wire [3:0]		alu__sel;		// From Decoder of mips_decode.v
@@ -170,12 +172,8 @@ module mips_core(/*AUTOARG*/
    wire			leftShift;		// From Decoder of mips_decode.v
    wire			memToReg;		// From Decoder of mips_decode.v
    wire			en_memLd;			// From Decoder of mips_decode.v
+   wire	[1:0] 	 regDest;
    // End of automatics
-
-   //Memory Module
-   assign        mem_addr = alu__out[31:2];
-   memLoader 	 ldToMem(mem_data_in, mem_write_en, rt_data, alu__out[1:0],
-   							ldType, en_memLd);
 	
    // Generate control signals
    mips_decode Decoder(/*AUTOINST*/
@@ -194,23 +192,102 @@ module mips_core(/*AUTOARG*/
 		       .isSe		(isSe),
 		       .ldType		(ldType[2:0]),
 		       .alu__sel	(alu__sel[3:0]),
-		       .isJal		(isJal),
-		       .isBranch	(isBranch),
-		       .isALU		(isALU),
 		       // Inputs
 		       .dcd_op		(dcd_op[5:0]),
 		       .dcd_funct2	(dcd_funct2[5:0]),
 		       .dcd_rd	    (dcd_rd),
 		       .dcd_rt	    (dcd_rt));
  
-   // Register File
-   // Instantiated the register file from reg_file.v here.
-   // Don't forget to hookup the "halted" signal to trigger the register dump 
- 
- 	wire [4:0] rd_num;
-    wire [31:0] shiftVal, memData, ld_mem_data;	
 
-	regfile file(// Outputs
+   //DECODE-EXECUTE PIPLELINE REGISERS
+   register #(1, 0) ID_EX_Reg0(pip_ctrl_we0,ctrl_we,clk, ~internal_halt, stall, rst_b);
+   register #(1, 0) ID_EX_Reg1(pip_ctrl_Sys0,ctrl_Sys,clk, ~internal_halt, stall, rst_b);
+   register #(2, 0) ID_EX_Reg2(pip_regDest0,regDest,clk, ~internal_halt,stall, rst_b);
+   register #(1, 1'bx) ID_EX_Reg3(pip_isImm0,isImm,clk, ~internal_halt, stall, rst_b);
+   register #(1, 0) ID_EX_Reg4(pip_isShift0,isShift,clk, ~internal_halt, stall, rst_b);
+   register #(1, 1'bx) ID_EX_Reg5(pip_leftShift0,leftShift,clk, ~internal_halt,  stall, rst_b);
+   register #(1, 1'bx) ID_EX_Reg6(pip_arithShift0,arithShift,clk, ~internal_halt, stall, rst_b);
+   register #(1, 1'bx) ID_EX_Reg7(pip_en_memLd0,en_memLd,clk, ~internal_halt, stall, rst_b);
+   register #(1, 0) ID_EX_Reg8(pip_memToReg0,memToReg,clk, ~internal_halt, stall, rst_b);
+   register #(1, 0) ID_EX_Reg9(pip_isLui0,isLui,clk, ~internal_halt, stall, rst_b);
+   register #(1, 1'bx) ID_EX_Reg10(pip_isSe,isSe,clk, ~internal_halt, stall, rst_b);
+   register #(3, 3'hx) ID_EX_Reg11(pip_ldType0,ldType,clk, ~internal_halt, stall, rst_b);
+   register #(4, 4'hx) ID_EX_Reg12(pip_alu__sel,alu__sel,clk, ~internal_halt, stall, rst_b);
+   register #(32, 0) ID_EX_Reg13(pip_rs_data0,rs_data,clk, ~internal_halt, stall, rst_b);
+   register #(32, 0) ID_EX_Reg14(pip_rt_data0,rt_data,clk, ~internal_halt, stall, rst_b);
+   register #(32, 0) ID_EX_Reg15(pip_dcd_e_imm,dcd_e_imm,clk, ~internal_halt, stall, rst_b);
+   register #(32, 0) ID_EX_Reg16(pip_dcd_se_imm,dcd_se_imm,clk, ~internal_halt, stall,rst_b);
+   register #(5, 0) ID_EX_Reg17(pip_dcd_shamt0,dcd_shamt,clk, ~internal_halt, stall, rst_b);
+   register #(5, 0) ID_EX_Reg18(pip_dcd_rd0,dcd_rd,clk, ~internal_halt, stall, rst_b); 
+   register #(5, 0) ID_EX_Reg19(pip_dcd_rt0,dcd_rt,clk, ~internal_halt, stall, rst_b); 
+
+   // Execute
+ 
+   wire [31:0] alu__op2,immVal;
+
+   mips_ALU ALU(.alu__out(alu__out), 
+                .alu__op1(pip_rs_data0),
+                .alu__op2(alu__op2),
+                .alu__sel(pip_alu__sel));
+ 
+   mux2_1 #(32) aluOpr2(alu__op2, immVal, pip_rt_data0, pip_isImm0);
+   mux2_1 #(32) se_e_mux(immVal, pip_dcd_se_imm, pip_dcd_e_imm, pip_isSe);
+   
+    //EXECUTE-MEMORY PIPLELINE REGISTERS
+   register #(1, 0) EX_MEM_Reg0(pip_ctrl_we1,pip_ctrl_we0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0)EX_MEM_Reg1(pip_alu__out0,alu__out,clk, ~internal_halt, 1'b0, rst_b); 
+   register #(3, 3'hx) EX_MEM_Reg2(pip_ldType1,pip_ldType0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0)EX_MEM_Reg3(pip_rt_data1,pip_rt_data0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) EX_MEM_Reg4(pip_en_memLd1,pip_en_memLd0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) EX_MEM_Reg5(pip_memToReg1,pip_memToReg0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 0) EX_MEM_Reg6(pip_dcd_rd1,pip_dcd_rd0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 0) EX_MEM_Reg7(pip_dcd_rt1,pip_dcd_rt0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0)EX_MEM_Reg8(pip_rs_data1,pip_rs_data0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) EX_MEM_Reg9(pip_isShift1,pip_isShift0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(2, 0) EX_MEM_Reg10(pip_regDest1,pip_regDest0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) EX_MEM_Reg11(pip_isLui1,pip_isLui0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) EX_MEM_Reg12(pip_isImm1,pip_isImm0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 0) EX_MEM_Reg13(pip_dcd_shamt1,pip_dcd_shamt0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) EX_MEM_Reg14(pip_leftShift1,pip_leftShift0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) EX_MEM_Reg15(pip_arithShift1,pip_arithShift0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) EX_MEM_Reg16(pip_ctrl_Sys1,pip_ctrl_Sys0,clk, ~internal_halt, 1'b0, rst_b);
+
+   //Memory Module
+   wire [31:0]   ld_mem_data, memData;
+
+   assign        mem_addr = pip_alu__out0[31:2];
+
+   memLoader 	 ldToMem(mem_data_in, mem_write_en, pip_rt_data1, pip_alu__out0[1:0],
+   							pip_ldType1, pip_en_memLd1);
+   memdecoder 	sel_mem(ld_mem_data, memData,pip_alu__out0[1:0],pip_ldType1);
+   mux2_1 #(32) memMux(memData,mem_data_out,pip_alu__out0,pip_memToReg1);
+   
+   //MEMORY-WRITE BACK PIPLELINE REGISTERS
+   register #(5, 0) MEM_WB_Reg0(pip_dcd_rd2,pip_dcd_rd1,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 0) MEM_WB_Reg1(pip_dcd_rt2,pip_dcd_rt1,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) MEM_WB_Reg2(pip_alu__out1,pip_alu__out0,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) MEM_WB_Reg3(pip_ld_mem_data,ld_mem_data,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) MEM_WB_Reg4(pip_ctrl_we2,pip_ctrl_we1,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) MEM_WB_Reg5(pip_isShift2,pip_isShift1,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) MEM_WB_Reg6(pip_memToReg2,pip_memToReg1,clk, ~internal_halt, 1'b0, rst_b);
+   register #(2, 0) MEM_WB_Reg7(pip_regDest2,pip_regDest1,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) MEM_WB_Reg8(pip_isLui2,pip_isLui1,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) MEM_WB_Reg9(pip_isImm2,pip_isImm1,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) MEM_WB_Reg10(pip_memData,memData,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) MEM_WB_Reg11(pip_rt_data2,pip_rt_data1,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) MEM_WB_Reg12(pip_rs_data2,pip_rs_data1,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 0) MEM_WB_Reg13(pip_dcd_shamt2,pip_dcd_shamt1,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) MEM_WB_Reg14(pip_leftShift2,pip_leftShift1,clk, ~internal_halt, 1'b0, rst_b); 
+   register #(1, 1'bx) MEM_WB_Reg15(pip_arithShift2,pip_arithShift1,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) MEM_WB_Reg16(pip_ctrl_Sys2,pip_ctrl_Sys1,clk, ~internal_halt, 1'b0, rst_b);
+
+   //Write Back
+
+   // Register File  
+   wire [4:0] rd_num;
+   wire [31:0] shiftVal;	
+
+   regfile file(// Outputs
    			.rs_data	(rs_data), 
 			.rt_data	(rt_data),
    			// Inputs
@@ -218,36 +295,36 @@ module mips_core(/*AUTOARG*/
 			.rt_num		(dcd_rt), 
 			.rd_num		(rd_num), 
 			.rd_data	(rd_data), 
-			.rd_we		(ctrl_we), 
+			.rd_we		(pip_ctrl_we2), 
 			.clk		(clk), 
 			.rst_b		(rst_b), 
 			.halted		(halted));
 	
-	mux4_1 #(5) writeReg(rd_num,dcd_rd,dcd_rt,5'd31,5'd31,regDest);
-	mux2_1 #(32) memMux(memData,mem_data_out,alu__out,memToReg);
-	memdecoder 	sel_mem(ld_mem_data, memData,alu__out[1:0],ldType);
-	mux4_1 #(32) writeData(rd_data,alu__out, ld_mem_data,shiftVal,nextpc,
-					{isShift,memToReg});
-
-	
-   // Execute
- 
-   wire [31:0] alu__op2,immVal;
-
-   mips_ALU ALU(.alu__out(alu__out), 
-                .alu__op1(rs_data),
-                .alu__op2(alu__op2),
-                .alu__sel(alu__sel));
- 
-   mux2_1 #(32) aluOpr2(alu__op2, immVal, rt_data, isImm);
-   mux2_1 #(32) se_e_mux(immVal, dcd_se_imm, dcd_e_imm, isSe);
-   
+   mux4_1 #(5) writeReg(rd_num,pip_dcd_rd2,pip_dcd_rt2,5'd31,5'd31,pip_regDest2);
+   mux4_1 #(32) writeData(rd_data,pip_alu__out1, pip_ld_mem_data,shiftVal,shiftVal,
+					{pip_isShift2,pip_memToReg2});
    wire [4:0] sa;
    wire [31:0] shift_data;
 
-   mux2_1 #(32) shiftMux(shift_data, memData, rt_data, isLui);
-   mux4_1 #(5) shiftBy(sa,rs_data[4:0],dcd_shamt,5'd16,5'd16,{isLui,isImm});
-   shift_reg sr(shiftVal, shift_data, sa, leftShift, arithShift);
+   mux2_1 #(32) shiftMux(shift_data, pip_memData, pip_rt_data2, pip_isLui2);
+   mux4_1 #(5)  shiftBy(sa,pip_rs_data2[4:0],pip_dcd_shamt2,5'd16,5'd16,
+                                                    {pip_isLui2,pip_isImm2});
+   shift_reg sr(shiftVal, shift_data, sa, pip_leftShift2, pip_arithShift2);
+
+
+   //Depencency Detection
+   stall_unit dependU(.stall   (stall), 
+                 .dcd_rs       (dcd_rs),
+                 .dcd_rt       (dcd_rt),
+                 .dcd_rd       (dcd_rd),
+                 .regDest      (regDest[0]),
+                 .pip_dest     (rd_num),
+                 .willWrite    (~stall & ctrl_we),
+                 .wroteBack    (pip_ctrl_we2),
+                 .clk          (clk),
+                 .rst_b        (rst_b));
+
+
 
    // Miscellaneous stuff (Exceptions, syscalls, and halt)
    exception_unit EU(.exception_halt(exception_halt), .pc(pc), .rst_b(rst_b),
@@ -268,15 +345,15 @@ module mips_core(/*AUTOARG*/
                          // you should read the syscall
                          // argument from $v0 of the register file 
 
-   syscall_unit SU(.syscall_halt(syscall_halt), .pc(pc), .clk(clk), .Sys(ctrl_Sys),
-                   .r_v0(r_v0), .rst_b(rst_b));
+   syscall_unit SU(.syscall_halt(syscall_halt), .pc(pc), .clk(clk), 
+                        .Sys(pip_ctrl_Sys2), .r_v0(r_v0), .rst_b(rst_b));
    assign        internal_halt = exception_halt | syscall_halt;
-   register #(1, 0) Halt(halted, internal_halt, clk, 1'b1, rst_b);
-   register #(32, 0) EPCReg(epc, pc, clk, load_ex_regs, rst_b);
+   register #(1, 0) Halt(halted, internal_halt, clk, 1'b1, 1'b0, rst_b);
+   register #(32, 0) EPCReg(epc, pc, clk, load_ex_regs, 1'b0, rst_b);
    register #(32, 0) CauseReg(cause,
                               {25'b0, cause_code, 2'b0}, 
-                              clk, load_ex_regs, rst_b);
-   register #(32, 0) BadVAddrReg(bad_v_addr, pc, clk, load_bva, rst_b);
+                              clk, load_ex_regs, 1'b0, rst_b);
+   register #(32, 0) BadVAddrReg(bad_v_addr, pc, clk, load_bva, 1'b0, rst_b);
 
 endmodule // mips_core
 
@@ -327,7 +404,7 @@ endmodule
 //// enable (input)  - Load new value?
 //// reset  (input)  - System reset
 ////
-module register(q, d, clk, enable, rst_b);
+module register(q, d, clk, enable,stallToZero, rst_b);
 
    parameter
             width = 32,
@@ -336,13 +413,17 @@ module register(q, d, clk, enable, rst_b);
    output [(width-1):0] q;
    reg [(width-1):0]    q;
    input [(width-1):0]  d;
-   input                 clk, enable, rst_b;
+   input                 clk, enable, stallToZero, rst_b;
 
    always @(posedge clk or negedge rst_b)
      if (~rst_b)
        q <= reset_value;
+     else if (stallToZero)
+        q <= reset_value;
      else if (enable)
        q <= d;
+     else
+       q <= q;
 
 endmodule // register
 
@@ -576,6 +657,29 @@ module memLoader (dataOut,mem_we, dataIn, sel,ldType, enable);
 		end
 	end
 endmodule
+
+
+module stall_unit(stall, dcd_rs,dcd_rt,dcd_rd,regDest, pip_dest,willWrite,wroteBack,clk, rst_b);
+    output            stall;
+    input      [4:0]  dcd_rs, dcd_rt, dcd_rd, pip_dest;
+    input             willWrite, wroteBack, regDest, clk, rst_b;
+
+    reg [31:0] valid;
+    wire [5:0] dest;
+
+    assign stall = (valid[dcd_rs]==0) || (valid[dcd_rt]==0);
+    assign dest = (regDest) ? dcd_rt : dcd_rd;
+    
+    always @ (posedge clk, negedge rst_b) begin
+        if(~rst_b) 
+            valid <= 32'hffffffff;
+        if (wroteBack)
+            valid[pip_dest] <= 1; 
+        if (willWrite)
+            valid[dest] <= 0; 
+    end
+endmodule
+
 
 // Local Variables:
 // verilog-library-directories:("." "../447rtl")

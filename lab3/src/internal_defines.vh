@@ -27,3 +27,5 @@
 `define	RD			 2'b00
 `define	RT			 2'b01
 `define	R31			 2'b10
+
+`define OP_NOP       6'h14

@@ -65,7 +65,6 @@ module mips_decode(/*AUTOARG*/
    // Outputs
    ctrl_we, ctrl_Sys, ctrl_RI, regDest, isImm, isShift, leftShift,
    arithShift, en_memLd, memToReg, isLui, isSe, ldType, alu__sel,
-   isJal,isBranch,isALU,
    // Inputs
    dcd_op, dcd_funct2,dcd_rd, dcd_rt
    );
@@ -73,8 +72,7 @@ module mips_decode(/*AUTOARG*/
    input       [5:0] dcd_op, dcd_funct2;
    input       [4:0] dcd_rd, dcd_rt;
    output reg        ctrl_we, ctrl_Sys, ctrl_RI, isImm, isShift,
-   					 leftShift, arithShift, en_memLd, memToReg,isLui, isSe,
-					 isJal, isBranch, isALU;
+   					 leftShift, arithShift, en_memLd, memToReg,isLui, isSe;
    output reg  [1:0] regDest;
    output reg  [2:0] ldType;
    output reg  [3:0] alu__sel;
@@ -94,9 +92,6 @@ module mips_decode(/*AUTOARG*/
 		isLui = 1'b0;
 		isSe = 1'bx;
 		ldType = 3'hx;
-		isJal = 1'b0;
-		isALU = 1'b0;
-		isBranch = 1'b0;
 		case(dcd_op)
 			`OP_OTHER0:
 				case(dcd_funct2)
@@ -225,77 +220,6 @@ module mips_decode(/*AUTOARG*/
 						ctrl_we = 1'b1;
 						regDest = `RD;
 						isImm = 1'b0;	
-					end
-					`OP0_JALR:
-					begin
-						alu__sel = `ALU_ADD;
-						isImm = 1'b0;
-						isALU = 1'b1;
-						isJal = 1'b0;
-						ctrl_we = 1'b1;
-						regDest = (dcd_rd==5'd0) ? `R31 : `RD;
-						{isShift,memToReg} = 2'b11;
-					end
-					`OP0_JR:
-					begin
-						alu__sel = `ALU_ADD;
-						isImm = 1'b0;
-						isJal = 1'b0;
-						isALU = 1'b1;
-					end
-					
-					default:
-						ctrl_RI = 1'b1;
-				endcase
-			`OP_OTHER1:
-				case (dcd_rt)
-					`OP1_BGEZ:
-					begin
-						//ALU
-						alu__sel = `ALU_BGE;
-						isImm = 1'b0;
-						//PC Data Select
-						isALU = 1'b1;
-						isJal = 1'b1;
-						isBranch = 1'b1;
-					end
-					`OP1_BGEZAL:
-					begin
-						//ALU
-						alu__sel = `ALU_BGE;
-						isImm = 1'b0;
-						//Write Data Select
-						ctrl_we = 1'b1;
-						regDest = `R31;
-						{isShift,memToReg} = 2'b11;
-						//PC Data Select
-						isALU = 1'b0;
-						isJal = 1'b0;
-						isBranch = 1'b1;
-					end
-					`OP1_BLTZ:
-					begin
-						//ALU select
-						alu__sel = `ALU_BL;
-						isImm = 1'b0;
-						//PC signal select
-						isALU = 1'b1;
-						isJal = 1'b1;
-						isBranch = 1'b1;
-					end
-					`OP1_BLTZAL:
-					begin
-						//ALU select
-						alu__sel = `ALU_BL;
-						isImm = 1'b0;
-						//Write Data Select
-						ctrl_we = 1'b1;
-						regDest = `R31;
-						{isShift,memToReg} = 2'b11;
-						//PC signal select
-						isALU = 1'b0;
-						isJal = 1'b0;
-						isBranch = 1'b1;
 					end
 					default:
 						ctrl_RI = 1'b1;
@@ -451,57 +375,10 @@ module mips_decode(/*AUTOARG*/
 				en_memLd = 1'b1;
 				ldType = `MEM_WORD;
 			end
-			`OP_J:
-			begin
-				isJal = 1'b1;
-			end
-			`OP_JAL:
-			begin
-				isJal = 1'b1;
-				ctrl_we = 1'b1;
-				regDest = `R31;
-				{isShift,memToReg} = 2'b11;
-			end
-			`OP_BEQ:
-			begin
-				//ALU select
-				alu__sel = `ALU_BEQ;
-				isImm = 1'b0;
-				//PC signal select
-				isALU = 1'b0;
-				isJal = 1'b0;
-				isBranch = 1'b1;
-			end
-			`OP_BGTZ:
-			begin
-				//ALU select
-				alu__sel = `ALU_BG;
-				isImm = 1'b0;
-				//PC signal select
-				isALU = 1'b0;
-				isJal = 1'b0;
-				isBranch = 1'b1;
-			end
-			`OP_BLEZ:
-			begin
-				//ALU select
-				alu__sel = `ALU_BLE;
-				isImm = 1'b0;
-				//PC signal select
-				isALU = 1'b0;
-				isJal = 1'b0;
-				isBranch = 1'b1;
-			end
-			`OP_BNE:
-			begin
-				//ALU select
-				alu__sel = `ALU_BNE;
-				isImm = 1'b0;
-				//PC signal select
-				isALU = 1'b0;
-				isJal = 1'b0;
-				isBranch = 1'b1;
-			end	
+            `OP_NOP:
+            begin
+                ctrl_RI = 1'b1;                 
+            end
 			default:
 			begin
 				ctrl_RI = 1'b1;
