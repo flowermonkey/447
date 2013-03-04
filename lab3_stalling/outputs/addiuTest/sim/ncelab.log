@@ -1,0 +1,88 @@
+ncelab: 08.20-s015: (c) Copyright 1995-2009 Cadence Design Systems, Inc.
+TOOL:	ncelab	08.20-s015: Started on Mar 03, 2013 at 00:10:42 EST
+ncelab
+    +access+rwc
+    -messages
+    worklib.testbench
+
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.add_const:module <0x688b9600>
+			streams:   1, words:   125
+		worklib.clock:module <0x62521b61>
+			streams:   2, words:   699
+		worklib.exception_unit:module <0x14ef46fd>
+			streams:   6, words:  5958
+		worklib.fowardingUnit:module <0x15824964>
+			streams:   1, words:  6187
+		worklib.memLoader:module <0x3453815a>
+			streams:   1, words:  3624
+		worklib.memdecoder:module <0x1ffd26d9>
+			streams:   1, words:  4258
+		worklib.mips_ALU:module <0x16d20728>
+			streams:   1, words:  3251
+		worklib.mips_core:module <0x2f10d3ee>
+			streams: 149, words: 22251
+		worklib.mips_decode:module <0x2d6d71f3>
+			streams:   1, words: 32035
+		worklib.mips_mem:module <0x746a2a4b>
+			streams:  92, words: 40181
+		worklib.multiply_coprocessor:module <0x3a9fdf9e>
+			streams:  11, words:  4764
+		worklib.mux2_1:module <0x3646e2c9>
+			streams:   1, words:   298
+		worklib.mux2_1:module <0x5c422ad8>
+			streams:   1, words:   312
+		worklib.mux4_1:module <0x0de0fc44>
+			streams:   1, words:   950
+		worklib.mux4_1:module <0x0de1790c>
+			streams:   1, words:   782
+		worklib.mux4_1:module <0x619a4ae4>
+			streams:   1, words:   915
+		worklib.regfile:module <0x4afce500>
+			streams:   6, words:  6354
+		worklib.register:module <0x04b2bbbd>
+			streams:   5, words:  1343
+		worklib.register:module <0x0f21998d>
+			streams:   5, words:  1297
+		worklib.register:module <0x2583cf3b>
+			streams:   5, words:  1344
+		worklib.register:module <0x3c5ce777>
+			streams:   5, words:  1295
+		worklib.register:module <0x62b4c229>
+			streams:   5, words:  1376
+		worklib.register:module <0x70221005>
+			streams:   5, words:  1291
+		worklib.register:module <0x74a03860>
+			streams:   5, words:  1317
+		worklib.register:module <0x7b649ea2>
+			streams:   5, words:  1317
+		worklib.register:module <0x7e74997a>
+			streams:   5, words:  1295
+		worklib.register:module <0x7eddb8c3>
+			streams:   5, words:  1343
+		worklib.shift_reg:module <0x53a80bc8>
+			streams:   1, words:   882
+		worklib.stall_unit:module <0x3e350fe2>
+			streams:   7, words:  9288
+		worklib.syscall_unit:module <0x68385ba3>
+			streams:   2, words:   743
+		worklib.testbench:module <0x0913dd18>
+			streams:   8, words:  1861
+	Loading native compiled code:     .................... Done
+	Building instance specific data structures.
+	Design hierarchy summary:
+		               Instances  Unique
+		Modules:              92      19
+		Registers:           120      51
+		Scalar wires:        182       -
+		Vectored wires:       95       -
+		Named events:          2       2
+		Always blocks:        92      23
+		Initial blocks:        5       5
+		Cont. assignments:    38      34
+		Pseudo assignments:  132     132
+	Writing initial simulation snapshot: worklib.testbench:module
+TOOL:	ncelab	08.20-s015: Exiting on Mar 03, 2013 at 00:10:43 EST  (total: 00:00:01)

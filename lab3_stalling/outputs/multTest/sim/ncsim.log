@@ -1,0 +1,61 @@
+ncsim: 08.20-s015: (c) Copyright 1995-2009 Cadence Design Systems, Inc.
+ncsim> database -open -shm -default waveforms
+Created default SHM database waveforms
+ncsim> probe -shm -create -depth all -all 
+Created probe 1
+ncsim> run 
+[Reserved instruction exception at 0x00400000]
+[Reserved instruction exception at 0x00400014]
+[Reserved instruction exception at 0x00400028]
+[Reserved instruction exception at 0x0040005c]
+[Reserved instruction exception at 0x00400064]
+[Reserved instruction exception at 0x00400088]
+[Reserved instruction exception at 0x00400090]
+[Reserved instruction exception at 0x004000a0]
+[Reserved instruction exception at 0x004000a0]
+[Reserved instruction exception at 0x004000a0]
+[Reserved instruction exception at 0x004000a0]
+[Reserved instruction exception at 0x004000c0]
+[Reserved instruction exception at 0x004000c8]
+[Reserved instruction exception at 0x004000cc]
+[Reserved instruction exception at 0x004000e8]
+[Reserved instruction exception at 0x004000f0]
+[End of program at 0x00400100]
+--- 18-447 Register file dump ---
+=== Simulation Cycle                12050 ===
+R          0	= 0x00000000	( 0 )
+R          1	= 0x00000000	( 0 )
+R          2	= 0x0000000a	( 10 )
+R          3	= 0x00005678	( 22136 )
+R          4	= 0x00000000	( 0 )
+R          5	= 0x00000000	( 0 )
+R          6	= 0x00000000	( 0 )
+R          7	= 0x00000000	( 0 )
+R          8	= 0xfedcba98	( 4275878552 )
+R          9	= 0x00005678	( 22136 )
+R         10	= 0x00000000	( 0 )
+R         11	= 0x00000000	( 0 )
+R         12	= 0x000000f8	( 248 )
+R         13	= 0x0002f28c	( 193164 )
+R         14	= 0x00000000	( 0 )
+R         15	= 0x00000000	( 0 )
+R         16	= 0x00000000	( 0 )
+R         17	= 0x00000000	( 0 )
+R         18	= 0x00000000	( 0 )
+R         19	= 0x00000000	( 0 )
+R         20	= 0x00000000	( 0 )
+R         21	= 0x00000000	( 0 )
+R         22	= 0x00000000	( 0 )
+R         23	= 0x00000000	( 0 )
+R         24	= 0x00000000	( 0 )
+R         25	= 0x0000fffa	( 65530 )
+R         26	= 0x00000000	( 0 )
+R         27	= 0x00000000	( 0 )
+R         28	= 0x00000000	( 0 )
+R         29	= 0x00000000	( 0 )
+R         30	= 0x00000000	( 0 )
+R         31	= 0x00000000	( 0 )
+--- End register file dump ---
+Simulation complete via $finish(1) at time 12050 NS + 4
+./src/testbench.v:85 	  $finish;
+ncsim> exit 
