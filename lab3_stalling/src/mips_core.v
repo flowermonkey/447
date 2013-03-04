@@ -702,13 +702,15 @@ module stall_unit(stall, dcd_rs,dcd_rt,
 
     assign stall = (~valid[dcd_rs]) || (~valid[dcd_rt]) || (ctrl_Sys&~valid[2]);
     
-    always @ (posedge clk, negedge rst_b) begin
+    always @ (posedge clk or negedge rst_b) begin
         if(~rst_b) 
             valid <= 32'hffffffff;
-        if (wroteBack)
-            valid[pip_dest] <= 1; 
-        if (willWrite)
-            valid[dest] <= 0; 
+        else if (wroteBack)
+            valid[pip_dest] <= 1;
+        else if (willWrite)
+            valid[dest] <=0;
+
+
     end
 endmodule
 

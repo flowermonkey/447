@@ -105,6 +105,10 @@ module mips_core(/*AUTOARG*/
 
    // Memory signals
    wire [31:0]   ld_mem_data, memData;
+   
+   //Write-back signals
+   wire [4:0] sa;
+   wire [31:0] shift_data;
 
    // Pipeline signals
    wire [31:0]   dcd_inst; 
@@ -137,7 +141,7 @@ module mips_core(/*AUTOARG*/
    wire [31:0]   mem_shiftVal, wb_shiftVal;
    wire [2:0]    ex_fwd_src, mem_fwd_src, wb_fwd_src;
 
-   // Fetch
+   // Fetch/*{{{*/
    
    // PC Management
    register #(32, text_start) PCReg(pc, nextpc, clk, ~stall,
@@ -147,10 +151,11 @@ module mips_core(/*AUTOARG*/
    add_const #(4) NextPCAdder(nextnextpc, nextpc);
    assign        inst_addr = pc[31:2];
    assign        valid_state = (pc!=0);
+/*}}}*/
 
-   //FETCH-DECODE PIPLELINE REGISTERS
+   //FETCH-DECODE PIPLELINE REGISTERS/*{{{*/
    register #(1, 0) FT_ID_Validbit(dcd_valid,valid_state,clk, ~internal_halt, stall, rst_b);
-   register #(32, 32'h14000000) FT_ID_Reg0(dcd_inst,inst,clk, ~stall, 1'b0, rst_b); 
+   register #(32, 32'h14000000) FT_ID_Reg0(dcd_inst,inst,clk, ~stall, 1'b0, rst_b); /*}}}*/
 
    // Instruction decoding/*{{{*/
    assign        dcd_op = dcd_inst[31:26];    // Opcode
@@ -229,12 +234,10 @@ module mips_core(/*AUTOARG*/
    //for Forwarding purposes
    wire [2:0] fwd_rs_valid, fwd_rt_valid,fwd_sys_valid;
 
-  assign fwd_rs_valid = 
+   assign fwd_rs_valid = 
                 {(ex_ctrl_we & ex_valid & (dcd_rs == ex_rd_num) & (ex_fwd_src<2)), 
                  (mem_ctrl_we & mem_valid & (dcd_rs == mem_rd_num) & (mem_fwd_src<3)),
                  (wb_ctrl_we & wb_valid & (dcd_rs == wb_rd_num))};
-
-
    assign fwd_rt_valid = 
                 {(ex_ctrl_we & ex_valid & (dcd_rt == ex_rd_num) & (ex_fwd_src<2)), 
                  (mem_ctrl_we & mem_valid & (dcd_rt == mem_rd_num) & (mem_fwd_src<3)),
@@ -271,28 +274,28 @@ module mips_core(/*AUTOARG*/
    register #(1, 0) ID_EX_Validbit(ex_valid,dcd_valid,clk, ~internal_halt, stall, rst_b);
    register #(1, 0) ID_EX_Reg0(ex_ctrl_we,ctrl_we,clk, ~internal_halt, stall, rst_b);
    register #(1, 0) ID_EX_Reg1(ex_ctrl_Sys,ctrl_Sys,clk, ~internal_halt, stall, rst_b);
-   register #(1, 1'bx) ID_EX_Reg3(ex_isImm,isImm,clk, ~internal_halt, stall, rst_b);
-   register #(1, 0) ID_EX_Reg4(ex_isShift,isShift,clk, ~internal_halt, stall, rst_b);
-   register #(1, 1'bx) ID_EX_Reg5(ex_leftShift,leftShift,clk, ~internal_halt,  stall, rst_b);
-   register #(1, 1'bx) ID_EX_Reg6(ex_arithShift,arithShift,clk, ~internal_halt, stall, rst_b);
-   register #(1, 1'bx) ID_EX_Reg7(ex_en_memLd,en_memLd,clk, ~internal_halt, stall, rst_b);
-   register #(1, 0) ID_EX_Reg8(ex_memToReg,memToReg,clk, ~internal_halt, stall, rst_b);
-   register #(1, 0) ID_EX_Reg9(ex_isLui,isLui,clk, ~internal_halt, stall, rst_b);
-   register #(1, 1'bx) ID_EX_Reg10(ex_isSe,isSe,clk, ~internal_halt, stall, rst_b);
-   register #(3, 3'hx) ID_EX_Reg11(ex_ldType,ldType,clk, ~internal_halt, stall, rst_b);
-   register #(4, 4'hx) ID_EX_Reg12(ex_alu__sel,alu__sel,clk, ~internal_halt, stall, rst_b);
-   register #(32, 0) ID_EX_Reg13(ex_rs_data,fwd_rs_data,clk, ~internal_halt, stall, rst_b);
-   register #(32, 0) ID_EX_Reg14(ex_rt_data,fwd_rt_data,clk, ~internal_halt, stall, rst_b);
-   register #(32, 0) ID_EX_Reg15(ex_e_imm,dcd_e_imm,clk, ~internal_halt, stall, rst_b);
-   register #(32, 0) ID_EX_Reg16(ex_se_imm,dcd_se_imm,clk, ~internal_halt, stall,rst_b);
-   register #(5, 0) ID_EX_Reg17(ex_shamt,dcd_shamt,clk, ~internal_halt, stall, rst_b);
-   register #(5, 0) ID_EX_Reg18(ex_rd_num,rd_num,clk, ~internal_halt, stall, rst_b); 
-   register #(1, 0) ID_EX_Reg20(ex_mult_act,mult_act,clk, ~internal_halt, stall, rst_b); 
-   register #(3, 0) ID_EX_Reg21(ex_mult_op,mult_op,clk, ~internal_halt, stall, rst_b); 
-   register #(3, 3'hx) ID_EX_Reg22(ex_fwd_src, fwd_src,clk, ~internal_halt, stall, rst_b); 
+   register #(1, 1'bx) ID_EX_Reg2(ex_isImm,isImm,clk, ~internal_halt, stall, rst_b);
+   register #(1, 0) ID_EX_Reg3(ex_isShift,isShift,clk, ~internal_halt, stall, rst_b);
+   register #(1, 1'bx) ID_EX_Reg4(ex_leftShift,leftShift,clk, ~internal_halt,  stall, rst_b);
+   register #(1, 1'bx) ID_EX_Reg5(ex_arithShift,arithShift,clk, ~internal_halt, stall, rst_b);
+   register #(1, 1'bx) ID_EX_Reg6(ex_en_memLd,en_memLd,clk, ~internal_halt, stall, rst_b);
+   register #(1, 0) ID_EX_Reg7(ex_memToReg,memToReg,clk, ~internal_halt, stall, rst_b);
+   register #(1, 0) ID_EX_Reg8(ex_isLui,isLui,clk, ~internal_halt, stall, rst_b);
+   register #(1, 1'bx) ID_EX_Reg9(ex_isSe,isSe,clk, ~internal_halt, stall, rst_b);
+   register #(3, 3'hx) ID_EX_Reg10(ex_ldType,ldType,clk, ~internal_halt, stall, rst_b);
+   register #(4, 4'hx) ID_EX_Reg11(ex_alu__sel,alu__sel,clk, ~internal_halt, stall, rst_b);
+   register #(32, 0) ID_EX_Reg12(ex_rs_data,fwd_rs_data,clk, ~internal_halt, stall, rst_b);
+   register #(32, 0) ID_EX_Reg13(ex_rt_data,fwd_rt_data,clk, ~internal_halt, stall, rst_b);
+   register #(32, 0) ID_EX_Reg14(ex_e_imm,dcd_e_imm,clk, ~internal_halt, stall, rst_b);
+   register #(32, 0) ID_EX_Reg15(ex_se_imm,dcd_se_imm,clk, ~internal_halt, stall,rst_b);
+   register #(5, 0) ID_EX_Reg16(ex_shamt,dcd_shamt,clk, ~internal_halt, stall, rst_b);
+   register #(5, 0) ID_EX_Reg17(ex_rd_num,rd_num,clk, ~internal_halt, stall, rst_b); 
+   register #(1, 0) ID_EX_Reg18(ex_mult_act,mult_act,clk, ~internal_halt, stall, rst_b); 
+   register #(3, 0) ID_EX_Reg19(ex_mult_op,mult_op,clk, ~internal_halt, stall, rst_b); 
+   register #(3, 3'hx) ID_EX_Reg20(ex_fwd_src, fwd_src,clk, ~internal_halt, stall, rst_b); 
 /*}}}*/
 
-   // Execute/*{{{*/
+   // Execute/*{{{*/th
  
 
    mips_ALU ALU(.alu__out(alu__out), 
@@ -322,22 +325,22 @@ module mips_core(/*AUTOARG*/
    register #(1, 0) EX_MEM_Validbit(mem_valid,ex_valid,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 0) EX_MEM_Reg0(mem_ctrl_we,ex_ctrl_we,clk, ~internal_halt, 1'b0, rst_b);
    register #(32, 0)EX_MEM_Reg1(mem_alu__out,alu__out,clk, ~internal_halt, 1'b0, rst_b); 
-   register #(32, 0)EX_MEM_Reg7(mem_mult__data,mult__data,clk, ~internal_halt, 1'b0, rst_b); 
-   register #(3, 3'hx) EX_MEM_Reg2(mem_ldType,ex_ldType,clk, ~internal_halt, 1'b0, rst_b);
-   register #(32, 0)EX_MEM_Reg3(mem_rt_data,ex_rt_data,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 1'bx) EX_MEM_Reg4(mem_en_memLd,ex_en_memLd,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 0) EX_MEM_Reg5(mem_memToReg,ex_memToReg,clk, ~internal_halt, 1'b0, rst_b);
-   register #(5, 0) EX_MEM_Reg6(mem_rd_num,ex_rd_num,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0)EX_MEM_Reg2(mem_mult__data,mult__data,clk, ~internal_halt, 1'b0, rst_b); 
+   register #(3, 3'hx) EX_MEM_Reg3(mem_ldType,ex_ldType,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0)EX_MEM_Reg4(mem_rt_data,ex_rt_data,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) EX_MEM_Reg5(mem_en_memLd,ex_en_memLd,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) EX_MEM_Reg6(mem_memToReg,ex_memToReg,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 0) EX_MEM_Reg7(mem_rd_num,ex_rd_num,clk, ~internal_halt, 1'b0, rst_b);
    register #(32, 0)EX_MEM_Reg8(mem_rs_data,ex_rs_data,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 0) EX_MEM_Reg9(mem_isShift,ex_isShift,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 0) EX_MEM_Reg11(mem_isLui,ex_isLui,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 1'bx) EX_MEM_Reg12(mem_isImm,ex_isImm,clk, ~internal_halt, 1'b0, rst_b);
-   register #(5, 0) EX_MEM_Reg13(mem_shamt,ex_shamt,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 1'bx) EX_MEM_Reg14(mem_leftShift,ex_leftShift,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 1'bx) EX_MEM_Reg15(mem_arithShift,ex_arithShift,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 0) EX_MEM_Reg16(mem_syscall_halt,syscall_halt,clk, ~internal_halt, 1'b0, rst_b);
-   register #(32, 0) EX_MEM_Reg17(mem_shiftVal,shiftVal,clk, ~internal_halt, 1'b0, rst_b);
-   register #(3, 3'hx) EX_MEM_Reg18(mem_fwd_src,ex_fwd_src,clk, ~internal_halt, 1'b0, rst_b);/*}}}*/
+   register #(1, 0) EX_MEM_Reg10(mem_isLui,ex_isLui,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) EX_MEM_Reg11(mem_isImm,ex_isImm,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 0) EX_MEM_Reg12(mem_shamt,ex_shamt,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) EX_MEM_Reg13(mem_leftShift,ex_leftShift,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) EX_MEM_Reg14(mem_arithShift,ex_arithShift,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) EX_MEM_Reg15(mem_syscall_halt,syscall_halt,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) EX_MEM_Reg16(mem_shiftVal,shiftVal,clk, ~internal_halt, 1'b0, rst_b);
+   register #(3, 3'hx) EX_MEM_Reg17(mem_fwd_src,ex_fwd_src,clk, ~internal_halt, 1'b0, rst_b);/*}}}*/
 
    //Memory Module/*{{{*/
 
@@ -352,23 +355,23 @@ module mips_core(/*AUTOARG*/
    //MEMORY-WRITE BACK PIPLELINE REGISTERS/*{{{*/
    register #(1, 0) MEM_WB_Validbit(wb_valid,mem_valid,clk, ~internal_halt, 1'b0, rst_b);
    register #(5, 0) MEM_WB_Reg0(wb_rd_num,mem_rd_num,clk, ~internal_halt, 1'b0, rst_b);
-   register #(32, 0) MEM_WB_Reg2(wb_alu__out,mem_alu__out,clk, ~internal_halt, 1'b0, rst_b);
-   register #(32, 0) MEM_WB_Reg1(wb_mult__data,mem_mult__data,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) MEM_WB_Reg1(wb_alu__out,mem_alu__out,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) MEM_WB_Reg2(wb_mult__data,mem_mult__data,clk, ~internal_halt, 1'b0, rst_b);
    register #(32, 0) MEM_WB_Reg3(wb_ld_mem_data,ld_mem_data,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 0) MEM_WB_Reg4(wb_ctrl_we,mem_ctrl_we,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 0) MEM_WB_Reg5(wb_isShift,mem_isShift,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 0) MEM_WB_Reg6(wb_memToReg,mem_memToReg,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 0) MEM_WB_Reg8(wb_isLui,mem_isLui,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 1'bx) MEM_WB_Reg9(wb_isImm,mem_isImm,clk, ~internal_halt, 1'b0, rst_b);
-   register #(32, 0) MEM_WB_Reg10(wb_memData,memData,clk, ~internal_halt, 1'b0, rst_b);
-   register #(32, 0) MEM_WB_Reg11(wb_rt_data,mem_rt_data,clk, ~internal_halt, 1'b0, rst_b);
-   register #(32, 0) MEM_WB_Reg12(wb_rs_data,mem_rs_data,clk, ~internal_halt, 1'b0, rst_b);
-   register #(5, 0) MEM_WB_Reg13(wb_shamt,mem_shamt,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 1'bx) MEM_WB_Reg14(wb_leftShift,mem_leftShift,clk, ~internal_halt, 1'b0, rst_b); 
-   register #(1, 1'bx) MEM_WB_Reg15(wb_arithShift,mem_arithShift,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 0) MEM_WB_Reg16(wb_syscall_halt,mem_syscall_halt,clk, ~internal_halt, 1'b0, rst_b);
-   register #(32, 0) MEM_WB_Reg17(wb_shiftVal,mem_shiftVal,clk, ~internal_halt, 1'b0, rst_b);
-   register #(3, 3'hx) MEM_WB_Reg18(wb_fwd_src,mem_fwd_src,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) MEM_WB_Reg7(wb_isLui,mem_isLui,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) MEM_WB_Reg8(wb_isImm,mem_isImm,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) MEM_WB_Reg9(wb_memData,memData,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) MEM_WB_Reg10(wb_rt_data,mem_rt_data,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) MEM_WB_Reg11(wb_rs_data,mem_rs_data,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 0) MEM_WB_Reg12(wb_shamt,mem_shamt,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) MEM_WB_Reg13(wb_leftShift,mem_leftShift,clk, ~internal_halt, 1'b0, rst_b); 
+   register #(1, 1'bx) MEM_WB_Reg14(wb_arithShift,mem_arithShift,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) MEM_WB_Reg15(wb_syscall_halt,mem_syscall_halt,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) MEM_WB_Reg16(wb_shiftVal,mem_shiftVal,clk, ~internal_halt, 1'b0, rst_b);
+   register #(3, 3'hx) MEM_WB_Reg17(wb_fwd_src,mem_fwd_src,clk, ~internal_halt, 1'b0, rst_b);
 /*}}}*/
 
    //Write Back/*{{{*/
@@ -388,8 +391,6 @@ module mips_core(/*AUTOARG*/
 			.rst_b		(rst_b), 
 			.halted		(halted));
 
-   wire [4:0] sa;
-   wire [31:0] shift_data;
 
    mux2_1 #(32) shiftMux(shift_data, wb_memData, wb_rt_data, wb_isLui);
    mux4_1 #(5)  shiftBy(sa,wb_rs_data[4:0],wb_shamt,5'd16,5'd16,
@@ -861,18 +862,18 @@ module stall_unit(stall,
     always @ (posedge clk, negedge rst_b) begin
         if(~rst_b) begin
             valid <= 32'hffffffff;
-            count[0] = 2'd0;count[1] = 2'd0;count[2] = 2'd0;count[3] = 2'd0;count[4] = 2'd0;count[5] = 2'd0;
-            count[6] = 2'd0;count[7] = 2'd0;count[8] = 2'd0;count[9] = 2'd0;count[10] = 2'd0;count[11] = 2'd0;
-            count[12] = 2'd0;count[13] = 2'd0;count[14] = 2'd0;count[15] = 2'd0;count[16] = 2'd0;count[17] = 2'd0;
-            count[18] = 2'd0;count[19] = 2'd0;count[20] = 2'd0;count[21] = 2'd0;count[22] = 2'd0;count[23] = 2'd0;
-            count[24] = 2'd0;count[25] = 2'd0;count[26] = 2'd0;count[27] = 2'd0;count[28] = 2'd0;count[29] = 2'd0;
-            count[30] = 2'd0;count[31] = 2'd0;
+            count[0] <=2'd0;count[1] <=2'd0;count[2] <=2'd0;count[3] <=2'd0;count[4] <=2'd0;count[5] <=2'd0;
+            count[6] <=2'd0;count[7] <=2'd0;count[8] <=2'd0;count[9] <=2'd0;count[10] <=2'd0;count[11] <=2'd0;
+            count[12] <=2'd0;count[13] <=2'd0;count[14] <=2'd0;count[15] <=2'd0;count[16] <=2'd0;count[17] <=2'd0;
+            count[18] <=2'd0;count[19] <=2'd0;count[20] <=2'd0;count[21] <=2'd0;count[22] <=2'd0;count[23] <=2'd0;
+            count[24] <=2'd0;count[25] <=2'd0;count[26] <=2'd0;count[27] <=2'd0;count[28] <=2'd0;count[29] <=2'd0;
+            count[30] <=2'd0;count[31] <=2'd0;
         end
-        if (wroteBack) begin
-            valid[wb_dest] <= (count[wb_dest] == 1); //<===THIS IS NOT WORKING!
+        else if (wroteBack) begin
+            valid[wb_dest] <= (count[wb_dest] == 1);
             count[wb_dest] <= ~(count[wb_dest] == 0) ? count[wb_dest] - 1 : 2'd0;
         end
-        if (willWrite) begin
+        else if (willWrite) begin
             valid[dest] <= 0; 
             count[dest] <= count[dest] + 1;
         end
