@@ -295,7 +295,7 @@ module mips_core(/*AUTOARG*/
    register #(3, 3'hx) ID_EX_Reg20(ex_fwd_src, fwd_src,clk, ~internal_halt, stall, rst_b); 
 /*}}}*/
 
-   // Execute/*{{{*/th
+   // Execute/*{{{*/
  
 
    mips_ALU ALU(.alu__out(alu__out), 
