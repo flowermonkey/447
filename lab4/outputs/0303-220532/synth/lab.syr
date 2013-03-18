@@ -1,0 +1,385 @@
+Release 14.2 - xst P.28xd (lin64)
+Copyright (c) 1995-2012 Xilinx, Inc.  All rights reserved.
+--> 
+Parameter TMPDIR set to temp
+
+
+Total REAL time to Xst completion: 0.00 secs
+Total CPU time to Xst completion: 0.07 secs
+ 
+--> 
+Parameter xsthdpdir set to xst
+
+
+Total REAL time to Xst completion: 0.00 secs
+Total CPU time to Xst completion: 0.07 secs
+ 
+--> 
+
+Reading constraint file lab.xcf.
+XCF parsing done.
+
+TABLE OF CONTENTS
+  1) Synthesis Options Summary
+  2) HDL Compilation
+  3) Design Hierarchy Analysis
+  4) HDL Analysis
+  5) HDL Synthesis
+     5.1) HDL Synthesis Report
+  6) Advanced HDL Synthesis
+     6.1) Advanced HDL Synthesis Report
+  7) Low Level Synthesis
+  8) Partition Report
+  9) Final Report
+	9.1) Device utilization summary
+	9.2) Partition Resource Summary
+	9.3) TIMING REPORT
+
+
+=========================================================================
+*                      Synthesis Options Summary                        *
+=========================================================================
+---- Source Parameters
+Input File Name                    : "lab.prj"
+Input Format                       : mixed
+Ignore Synthesis Constraint File   : NO
+Synthesis Constraint File          : lab.xcf
+
+---- Target Parameters
+Output File Name                   : "lab"
+Output Format                      : NGC
+Target Device                      : xc5vlx110t-ff1136-2
+
+---- Source Options
+Top Module Name                    : mips_core
+Automatic FSM Extraction           : YES
+FSM Encoding Algorithm             : Auto
+Safe Implementation                : No
+FSM Style                          : lut
+RAM Extraction                     : Yes
+RAM Style                          : Auto
+ROM Extraction                     : Yes
+Mux Style                          : Auto
+Decoder Extraction                 : YES
+Priority Encoder Extraction        : YES
+Shift Register Extraction          : YES
+Logical Shifter Extraction         : YES
+XOR Collapsing                     : YES
+ROM Style                          : Auto
+Mux Extraction                     : YES
+Resource Sharing                   : YES
+Asynchronous To Synchronous        : NO
+Multiplier Style                   : auto
+Automatic Register Balancing       : No
+
+---- Target Options
+Add IO Buffers                     : YES
+Global Maximum Fanout              : 500
+Add Generic Clock Buffer(BUFG)     : 24
+Register Duplication               : YES
+Slice Packing                      : YES
+Optimize Instantiated Primitives   : NO
+Use Clock Enable                   : Yes
+Use Synchronous Set                : Yes
+Use Synchronous Reset              : Yes
+Pack IO Registers into IOBs        : auto
+Equivalent register Removal        : YES
+
+---- General Options
+Optimization Goal                  : Speed
+Optimization Effort                : 1
+Library Search Order               : lab.lso
+Keep Hierarchy                     : NO
+RTL Output                         : Yes
+Global Optimization                : AllClockNets
+Read Cores                         : NO
+Write Timing Constraints           : NO
+Cross Clock Analysis               : NO
+Hierarchy Separator                : /
+Bus Delimiter                      : <>
+Case Specifier                     : maintain
+Slice Utilization Ratio            : 100
+BRAM Utilization Ratio             : 100
+Verilog 2001                       : YES
+Auto BRAM Packing                  : NO
+Slice Utilization Ratio Delta      : 5
+
+=========================================================================
+
+
+=========================================================================
+*                          HDL Compilation                              *
+=========================================================================
+Compiling verilog file "src/exception_unit.v" in library work
+Compiling verilog include file "src/mips_defines.vh"
+Compiling verilog file "src/mips_core.v" in library work
+Compiling verilog include file "src/mips_defines.vh"
+Compiling verilog include file "src/internal_defines.vh"
+Module <exception_unit> compiled
+Module <mips_core> compiled
+Module <mips_ALU> compiled
+Module <register> compiled
+Module <shift_reg> compiled
+Module <adder> compiled
+Module <mux2_1> compiled
+Module <mux4_1> compiled
+Module <add_const> compiled
+Module <memdecoder> compiled
+Module <memLoader> compiled
+Module <fowardingUnit> compiled
+Compiling verilog file "src/mips_decode.v" in library work
+Compiling verilog include file "src/mips_defines.vh"
+Compiling verilog include file "src/internal_defines.vh"
+Module <stall_unit> compiled
+Compiling verilog file "src/mips_mem.v" in library work
+Module <mips_decode> compiled
+Compiling verilog file "src/multiply_coprocessor.v" in library work
+Module <mips_mem> compiled
+Compiling verilog file "src/regfile.v" in library work
+Module <multiply_coprocessor> compiled
+Compiling verilog file "src/syscall_unit.v" in library work
+Compiling verilog include file "src/mips_defines.vh"
+Module <regfile> compiled
+Compiling verilog file "src/testbench.v" in library work
+Module <syscall_unit> compiled
+Module <testbench> compiled
+Module <clock> compiled
+No errors in compilation
+Analysis of file <"lab.prj"> succeeded.
+ 
+
+Reading constraint file lab.xcf.
+XCF parsing done.
+
+=========================================================================
+*                     Design Hierarchy Analysis                         *
+=========================================================================
+Analyzing hierarchy for module <mips_core> in library <work> with parameters.
+	text_start = "00000000010000000000000000000000"
+
+Analyzing hierarchy for module <register> in library <work> with parameters.
+	reset_value = "00000000010000000000000000000000"
+	width = "00000000000000000000000000100000"
+
+Analyzing hierarchy for module <register> in library <work> with parameters.
+	reset_value = "00000000010000000000000000000100"
+	width = "00000000000000000000000000100000"
+
+Analyzing hierarchy for module <add_const> in library <work> with parameters.
+	add_value = "00000000000000000000000000000100"
+
+Analyzing hierarchy for module <register> in library <work> with parameters.
+	reset_value = "00000000000000000000000000000000"
+	width = "00000000000000000000000000000001"
+
+Analyzing hierarchy for module <register> in library <work> with parameters.
+	reset_value = "00010100000000000000000000000000"
+	width = "00000000000000000000000000100000"
+
+Analyzing hierarchy for module <mips_decode> in library <work>.
+
+Analyzing hierarchy for module <mux4_1> in library <work> with parameters.
+	width = "00000000000000000000000000000101"
+
+Analyzing hierarchy for module <mux4_1> in library <work> with parameters.
+	width = "00000000000000000000000000100000"
+
+Analyzing hierarchy for module <mux2_1> in library <work> with parameters.
+	width = "00000000000000000000000000000101"
+
+Analyzing hierarchy for module <fowardingUnit> in library <work>.
+
+Analyzing hierarchy for module <register> in library <work> with parameters.
+	reset_value = "X"
+	width = "00000000000000000000000000000001"
+
+Analyzing hierarchy for module <register> in library <work> with parameters.
+	reset_value = "XXX"
+	width = "00000000000000000000000000000011"
+
+Analyzing hierarchy for module <register> in library <work> with parameters.
+	reset_value = "XXXX"
+	width = "00000000000000000000000000000100"
+
+Analyzing hierarchy for module <register> in library <work> with parameters.
+	reset_value = "00000000000000000000000000000000"
+	width = "00000000000000000000000000100000"
+
+Analyzing hierarchy for module <register> in library <work> with parameters.
+	reset_value = "00000000000000000000000000000000"
+	width = "00000000000000000000000000000101"
+
+Analyzing hierarchy for module <register> in library <work> with parameters.
+	reset_value = "00000000000000000000000000000000"
+	width = "00000000000000000000000000000011"
+
+Analyzing hierarchy for module <mips_ALU> in library <work>.
+
+Analyzing hierarchy for module <mux2_1> in library <work> with parameters.
+	width = "00000000000000000000000000100000"
+
+Analyzing hierarchy for module <multiply_coprocessor> in library <work>.
+
+Analyzing hierarchy for module <syscall_unit> in library <work>.
+
+Analyzing hierarchy for module <memLoader> in library <work>.
+
+Analyzing hierarchy for module <memdecoder> in library <work>.
+
+Analyzing hierarchy for module <regfile> in library <work>.
+
+Analyzing hierarchy for module <shift_reg> in library <work>.
+
+Analyzing hierarchy for module <stall_unit> in library <work>.
+
+Analyzing hierarchy for module <exception_unit> in library <work>.
+
+
+=========================================================================
+*                            HDL Analysis                               *
+=========================================================================
+Analyzing top module <mips_core>.
+	text_start = 32'b00000000010000000000000000000000
+Module <mips_core> is correct for synthesis.
+ 
+Analyzing module <register.1> in library <work>.
+	reset_value = 32'b00000000010000000000000000000000
+	width = 32'sb00000000000000000000000000100000
+Module <register.1> is correct for synthesis.
+ 
+Analyzing module <register.2> in library <work>.
+	reset_value = 32'b00000000010000000000000000000100
+	width = 32'sb00000000000000000000000000100000
+Module <register.2> is correct for synthesis.
+ 
+Analyzing module <add_const> in library <work>.
+	add_value = 32'sb00000000000000000000000000000100
+Module <add_const> is correct for synthesis.
+ 
+Analyzing module <register.3> in library <work>.
+	reset_value = 32'sb00000000000000000000000000000000
+	width = 32'sb00000000000000000000000000000001
+Module <register.3> is correct for synthesis.
+ 
+Analyzing module <register.4> in library <work>.
+	reset_value = 32'b00010100000000000000000000000000
+	width = 32'sb00000000000000000000000000100000
+Module <register.4> is correct for synthesis.
+ 
+Analyzing module <mips_decode> in library <work>.
+Module <mips_decode> is correct for synthesis.
+ 
+Analyzing module <mux4_1.1> in library <work>.
+	width = 32'sb00000000000000000000000000000101
+Module <mux4_1.1> is correct for synthesis.
+ 
+Analyzing module <mux4_1.2> in library <work>.
+	width = 32'sb00000000000000000000000000100000
+Module <mux4_1.2> is correct for synthesis.
+ 
+Analyzing module <mux2_1.1> in library <work>.
+	width = 32'sb00000000000000000000000000000101
+Module <mux2_1.1> is correct for synthesis.
+ 
+Analyzing module <fowardingUnit> in library <work>.
+Module <fowardingUnit> is correct for synthesis.
+ 
+Analyzing module <register.5> in library <work>.
+	reset_value = 1'bX
+	width = 32'sb00000000000000000000000000000001
+Module <register.5> is correct for synthesis.
+ 
+Analyzing module <register.6> in library <work>.
+	reset_value = 3'bXXX
+	width = 32'sb00000000000000000000000000000011
+Module <register.6> is correct for synthesis.
+ 
+Analyzing module <register.7> in library <work>.
+	reset_value = 4'bXXXX
+	width = 32'sb00000000000000000000000000000100
+Module <register.7> is correct for synthesis.
+ 
+Analyzing module <register.8> in library <work>.
+	reset_value = 32'sb00000000000000000000000000000000
+	width = 32'sb00000000000000000000000000100000
+Module <register.8> is correct for synthesis.
+ 
+Analyzing module <register.9> in library <work>.
+	reset_value = 32'sb00000000000000000000000000000000
+	width = 32'sb00000000000000000000000000000101
+Module <register.9> is correct for synthesis.
+ 
+Analyzing module <register.10> in library <work>.
+	reset_value = 32'sb00000000000000000000000000000000
+	width = 32'sb00000000000000000000000000000011
+Module <register.10> is correct for synthesis.
+ 
+Analyzing module <mips_ALU> in library <work>.
+Module <mips_ALU> is correct for synthesis.
+ 
+Analyzing module <mux2_1.2> in library <work>.
+	width = 32'sb00000000000000000000000000100000
+Module <mux2_1.2> is correct for synthesis.
+ 
+Analyzing module <multiply_coprocessor> in library <work>.
+Module <multiply_coprocessor> is correct for synthesis.
+ 
+Analyzing module <syscall_unit> in library <work>.
+Module <syscall_unit> is correct for synthesis.
+ 
+Analyzing module <memLoader> in library <work>.
+Module <memLoader> is correct for synthesis.
+ 
+Analyzing module <memdecoder> in library <work>.
+Module <memdecoder> is correct for synthesis.
+ 
+Analyzing module <regfile> in library <work>.
+Module <regfile> is correct for synthesis.
+ 
+Analyzing module <shift_reg> in library <work>.
+Module <shift_reg> is correct for synthesis.
+ 
+Analyzing module <stall_unit> in library <work>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ERROR:Xst:880 - "src/mips_core.v" line 874: Cannot mix blocking and non blocking assignments on signal <count>.
+ 
+Found 32 error(s). Aborting synthesis.
+--> 
+
+
+Total memory usage is 541924 kilobytes
+
+Number of errors   :   32 (   0 filtered)
+Number of warnings :    0 (   0 filtered)
+Number of infos    :    0 (   0 filtered)
+

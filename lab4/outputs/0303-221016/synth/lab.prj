@@ -1,0 +1,8 @@
+verilog work "src/exception_unit.v"
+verilog work "src/mips_core.v"
+verilog work "src/mips_decode.v"
+verilog work "src/mips_mem.v"
+verilog work "src/multiply_coprocessor.v"
+verilog work "src/regfile.v"
+verilog work "src/syscall_unit.v"
+verilog work "src/testbench.v"
