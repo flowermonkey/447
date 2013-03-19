@@ -132,6 +132,8 @@ module mips_core(/*AUTOARG*/
    wire [4:0]    ex_shamt,mem_shamt,wb_shamt;
    wire [31:0]   mem_alu__out,wb_alu__out;
    wire [4:0]    ex_rd_num,mem_rd_num,wb_rd_num;
+   wire [4:0]    ex_rs,mem_rs;
+   wire [4:0]    ex_rt,mem_rt;
    wire [31:0]   wb_ld_mem_data;
    wire [31:0]   wb_memData;
    wire          valid_state, dcd_valid, ex_valid, mem_valid, wb_valid;
@@ -290,9 +292,11 @@ module mips_core(/*AUTOARG*/
    register #(32, 0) ID_EX_Reg15(ex_se_imm,dcd_se_imm,clk, ~internal_halt, stall,rst_b);
    register #(5, 0) ID_EX_Reg16(ex_shamt,dcd_shamt,clk, ~internal_halt, stall, rst_b);
    register #(5, 0) ID_EX_Reg17(ex_rd_num,rd_num,clk, ~internal_halt, stall, rst_b); 
-   register #(1, 0) ID_EX_Reg18(ex_mult_act,mult_act,clk, ~internal_halt, stall, rst_b); 
-   register #(3, 0) ID_EX_Reg19(ex_mult_op,mult_op,clk, ~internal_halt, stall, rst_b); 
-   register #(3, 3'hx) ID_EX_Reg20(ex_fwd_src, fwd_src,clk, ~internal_halt, stall, rst_b); 
+   register #(5, 0) ID_EX_Reg18(ex_rs,dcd_rs,clk, ~internal_halt, stall, rst_b); 
+   register #(5, 0) ID_EX_Reg19(ex_rt,dcd_rt,clk, ~internal_halt, stall, rst_b); 
+   register #(1, 0) ID_EX_Reg20(ex_mult_act,mult_act,clk, ~internal_halt, stall, rst_b); 
+   register #(3, 0) ID_EX_Reg21(ex_mult_op,mult_op,clk, ~internal_halt, stall, rst_b); 
+   register #(3, 3'hx) ID_EX_Reg22(ex_fwd_src, fwd_src,clk, ~internal_halt, stall, rst_b); 
 /*}}}*/
 
    // Execute/*{{{*/
@@ -331,16 +335,18 @@ module mips_core(/*AUTOARG*/
    register #(1, 1'bx) EX_MEM_Reg5(mem_en_memLd,ex_en_memLd,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 0) EX_MEM_Reg6(mem_memToReg,ex_memToReg,clk, ~internal_halt, 1'b0, rst_b);
    register #(5, 0) EX_MEM_Reg7(mem_rd_num,ex_rd_num,clk, ~internal_halt, 1'b0, rst_b);
-   register #(32, 0)EX_MEM_Reg8(mem_rs_data,ex_rs_data,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 0) EX_MEM_Reg9(mem_isShift,ex_isShift,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 0) EX_MEM_Reg10(mem_isLui,ex_isLui,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 1'bx) EX_MEM_Reg11(mem_isImm,ex_isImm,clk, ~internal_halt, 1'b0, rst_b);
-   register #(5, 0) EX_MEM_Reg12(mem_shamt,ex_shamt,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 1'bx) EX_MEM_Reg13(mem_leftShift,ex_leftShift,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 1'bx) EX_MEM_Reg14(mem_arithShift,ex_arithShift,clk, ~internal_halt, 1'b0, rst_b);
-   register #(1, 0) EX_MEM_Reg15(mem_syscall_halt,syscall_halt,clk, ~internal_halt, 1'b0, rst_b);
-   register #(32, 0) EX_MEM_Reg16(mem_shiftVal,shiftVal,clk, ~internal_halt, 1'b0, rst_b);
-   register #(3, 3'hx) EX_MEM_Reg17(mem_fwd_src,ex_fwd_src,clk, ~internal_halt, 1'b0, rst_b);/*}}}*/
+   register #(5, 0) EX_MEM_Reg8(mem_rs,ex_rs,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 0) EX_MEM_Reg9(mem_rt,ex_rt,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0)EX_MEM_Reg10(mem_rs_data,ex_rs_data,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) EX_MEM_Reg11(mem_isShift,ex_isShift,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) EX_MEM_Reg12(mem_isLui,ex_isLui,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) EX_MEM_Reg13(mem_isImm,ex_isImm,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 0) EX_MEM_Reg14(mem_shamt,ex_shamt,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) EX_MEM_Reg15(mem_leftShift,ex_leftShift,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'bx) EX_MEM_Reg16(mem_arithShift,ex_arithShift,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 0) EX_MEM_Reg17(mem_syscall_halt,syscall_halt,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) EX_MEM_Reg18(mem_shiftVal,shiftVal,clk, ~internal_halt, 1'b0, rst_b);
+   register #(3, 3'hx) EX_MEM_Reg19(mem_fwd_src,ex_fwd_src,clk, ~internal_halt, 1'b0, rst_b);/*}}}*/
 
    //Memory Module/*{{{*/
 
@@ -397,7 +403,6 @@ module mips_core(/*AUTOARG*/
                                                     {wb_isLui,wb_isImm});
    shift_reg sr(shiftVal, shift_data, sa, wb_leftShift, wb_arithShift);/*}}}*/
 
-
    //Depencency Detection
    stall_unit dependU(.stall   (stall), 
                  .dcd_rs       (dcd_rs),
@@ -407,7 +412,7 @@ module mips_core(/*AUTOARG*/
                  .fwd_rs_valid (fwd_rs_valid), 
                  .fwd_rt_valid (fwd_rt_valid), 
                  .fwd_sys_valid(fwd_sys_valid),
-                 .willWrite    (~stall & ctrl_we),
+                 .willWrite    (~stall & (ctrl_we)),
                  .wroteBack    (wb_ctrl_we),
                  .ctrl_Sys     (ctrl_Sys),
                  .clk          (clk),
@@ -869,11 +874,11 @@ module stall_unit(stall,
             count[24] <=2'd0;count[25] <=2'd0;count[26] <=2'd0;count[27] <=2'd0;count[28] <=2'd0;count[29] <=2'd0;
             count[30] <=2'd0;count[31] <=2'd0;
         end
-        else if (wroteBack) begin
+        if (wroteBack) begin
             valid[wb_dest] <= (count[wb_dest] == 1);
             count[wb_dest] <= ~(count[wb_dest] == 0) ? count[wb_dest] - 1 : 2'd0;
         end
-        else if (willWrite) begin
+        if (willWrite) begin
             valid[dest] <= 0; 
             count[dest] <= count[dest] + 1;
         end

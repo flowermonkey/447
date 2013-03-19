@@ -83,7 +83,7 @@ module mips_decode(/*AUTOARG*/
 		ctrl_we = 1'b0;
 		ctrl_Sys = 1'b0;
 		ctrl_RI = 1'b0;
-		regDest = 2'b0;
+		regDest = 2'bxx;
 		isImm = 1'bx;
 		isShift = 1'b0;
 		leftShift = 1'bx;
@@ -246,6 +246,7 @@ module mips_decode(/*AUTOARG*/
 					begin
 		                mult_act = 1'b1;
                         mult_op  = `MUL_MFHI;
+						regDest = `RD;
                         isShift = 1'b1;
                         memToReg = 1'b1;
                         fwd_src = 3'd2;
@@ -254,6 +255,7 @@ module mips_decode(/*AUTOARG*/
 					begin
 		                mult_act = 1'b1;
                         mult_op  = `MUL_MTHI;
+						regDest = `RD;
                         isShift = 1'b1;
                         memToReg = 1'b1;
                         fwd_src = 3'd2;
@@ -262,6 +264,7 @@ module mips_decode(/*AUTOARG*/
 					begin
 		                mult_act = 1'b1;
                         mult_op  = `MUL_MFLO;
+						regDest = `RD;
                         isShift = 1'b1;
                         memToReg = 1'b1;
                         fwd_src = 3'd2;
@@ -270,6 +273,7 @@ module mips_decode(/*AUTOARG*/
 					begin
 		                mult_act = 1'b1;
                         mult_op  = `MUL_MTLO;
+						regDest = `RD;
                         isShift = 1'b1;
                         memToReg = 1'b1;
                         fwd_src = 3'd2;
@@ -278,6 +282,7 @@ module mips_decode(/*AUTOARG*/
 					begin
 		                mult_act = 1'b1;
                         mult_op  = `MUL_MULT;
+						regDest = `RD;
                         isShift = 1'b1;
                         memToReg = 1'b1;
                         fwd_src = 3'd2;
@@ -286,6 +291,7 @@ module mips_decode(/*AUTOARG*/
 					begin
 		                mult_act = 1'b1;
                         mult_op  = `MUL_MULTU;
+						regDest = `RD;
                         isShift = 1'b1;
                         memToReg = 1'b1;
                         fwd_src = 3'd2;

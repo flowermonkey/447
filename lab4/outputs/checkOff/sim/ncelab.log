@@ -1,5 +1,5 @@
 ncelab: 08.20-s015: (c) Copyright 1995-2009 Cadence Design Systems, Inc.
-TOOL:	ncelab	08.20-s015: Started on Mar 08, 2013 at 19:10:23 EST
+TOOL:	ncelab	08.20-s015: Started on Mar 18, 2013 at 20:55:06 EDT
 ncelab
     +access+rwc
     -messages
@@ -23,10 +23,10 @@ ncelab
 			streams:   1, words:  4258
 		worklib.mips_ALU:module <0x16d20728>
 			streams:   1, words:  3251
-		worklib.mips_core:module <0x3a095167>
-			streams: 150, words: 22790
+		worklib.mips_core:module <0x3a2fd44e>
+			streams: 156, words: 23614
 		worklib.mips_decode:module <0x2d6d71f3>
-			streams:   1, words: 31805
+			streams:   1, words: 32530
 		worklib.mips_mem:module <0x746a2a4b>
 			streams:  92, words: 40181
 		worklib.multiply_coprocessor:module <0x3a9fdf9e>
@@ -66,7 +66,7 @@ ncelab
 		worklib.shift_reg:module <0x53a80bc8>
 			streams:   1, words:   882
 		worklib.stall_unit:module <0x71c7efbd>
-			streams:  39, words: 12860
+			streams:  39, words: 12850
 		worklib.syscall_unit:module <0x68385ba3>
 			streams:   2, words:   743
 		worklib.testbench:module <0x0913dd18>
@@ -75,14 +75,14 @@ ncelab
 	Building instance specific data structures.
 	Design hierarchy summary:
 		               Instances  Unique
-		Modules:              92      19
-		Registers:           120      51
-		Scalar wires:        182       -
-		Vectored wires:       96       -
+		Modules:              96      19
+		Registers:           124      51
+		Scalar wires:        188       -
+		Vectored wires:      100       -
 		Named events:          2       2
-		Always blocks:        92      23
+		Always blocks:        96      23
 		Initial blocks:        5       5
 		Cont. assignments:    39      35
-		Pseudo assignments:  132     132
+		Pseudo assignments:  138     138
 	Writing initial simulation snapshot: worklib.testbench:module
-TOOL:	ncelab	08.20-s015: Exiting on Mar 08, 2013 at 19:10:24 EST  (total: 00:00:01)
+TOOL:	ncelab	08.20-s015: Exiting on Mar 18, 2013 at 20:55:07 EDT  (total: 00:00:01)
