@@ -101,7 +101,6 @@ module mips_core(/*AUTOARG*/
     
    // Execute signals
    wire [31:0] alu__op2,immVal, mult__data;
-   wire [2:0]  mult_op;
    
    // Memory signals
    wire [31:0]   ld_mem_data, memData;
@@ -191,7 +190,7 @@ module mips_core(/*AUTOARG*/
    wire			en_memLd;		// From Decoder of mips_decode.v
    wire	[1:0] 	regDest;    	// From Decoder of mips_decode.v
    wire         mult_act;   	// From Decoder of mips_decode.v
-   wire [2:0]   mult_go;    	// From Decoder of mips_decode.v
+   wire [2:0]   mult_op;    	// From Decoder of mips_decode.v
    // End of automatics
 	
    // Generate control signals
@@ -705,9 +704,9 @@ module stall_unit(stall, dcd_rs,dcd_rt,
     always @ (posedge clk or negedge rst_b) begin
         if(~rst_b) 
             valid <= 32'hffffffff;
-        else if (wroteBack)
+        if (wroteBack)
             valid[pip_dest] <= 1;
-        else if (willWrite)
+        if (willWrite)
             valid[dest] <=0;
 
 

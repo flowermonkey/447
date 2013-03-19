@@ -140,7 +140,6 @@ module mips_core(/*AUTOARG*/
    wire [2:0]    ex_mult_op;
    wire          ex_mult_act;
    wire [31:0]   mem_mult__data, wb_mult__data;
-   wire [31:0]   mem_shiftVal, wb_shiftVal;
    wire [1:0]    ex_fwd_src, mem_fwd_src, wb_fwd_src;
 
    // Fetch/*{{{*/
@@ -156,7 +155,7 @@ module mips_core(/*AUTOARG*/
 /*}}}*/
 
    //FETCH-DECODE PIPLELINE REGISTERS/*{{{*/
-   register #(1, 0) FT_ID_Validbit(dcd_valid,valid_state,clk, ~internal_halt, stall, rst_b);
+   register #(1, 0) FT_ID_Validbit(dcd_valid,valid_state,clk, ~internal_halt,1'b0, rst_b);
    register #(32, 32'h14000000) FT_ID_Reg0(dcd_inst,inst,clk, ~stall, 1'b0, rst_b); /*}}}*/
 
    // Instruction decoding/*{{{*/
@@ -237,16 +236,25 @@ module mips_core(/*AUTOARG*/
 
    assign fwd_rs_valid = 
                 {(ex_ctrl_we & ex_valid & (dcd_rs == ex_rd_num) & (ex_fwd_src<1)), 
-                 (mem_ctrl_we & mem_valid & (dcd_rs == mem_rd_num) & (mem_fwd_src<2)),
-                 (wb_ctrl_we & wb_valid & (dcd_rs == wb_rd_num))};
+                 (mem_ctrl_we & mem_valid & (dcd_rs == mem_rd_num) & (mem_fwd_src<2)
+                 & ~(ex_ctrl_we & ex_valid & (dcd_rs == ex_rd_num))),
+                 (wb_ctrl_we & wb_valid & (dcd_rs == wb_rd_num)
+                 & ~(ex_ctrl_we & ex_valid & (dcd_rs == ex_rd_num))
+                 & ~(mem_ctrl_we & mem_valid & (dcd_rs == mem_rd_num)))};
    assign fwd_rt_valid = 
                 {(ex_ctrl_we & ex_valid & (dcd_rt == ex_rd_num) & (ex_fwd_src<1)), 
-                 (mem_ctrl_we & mem_valid & (dcd_rt == mem_rd_num) & (mem_fwd_src<2)),
-                 (wb_ctrl_we & wb_valid & (dcd_rt == wb_rd_num))};
+                 (mem_ctrl_we & mem_valid & (dcd_rt == mem_rd_num) & (mem_fwd_src<2)
+                 & ~(ex_ctrl_we & ex_valid & (dcd_rt == ex_rd_num))),
+                 (wb_ctrl_we & wb_valid & (dcd_rt == wb_rd_num)
+                 & ~(ex_ctrl_we & ex_valid & (dcd_rt == ex_rd_num))
+                 & ~(mem_ctrl_we & mem_valid & (dcd_rt == mem_rd_num)))};
    assign fwd_sys_valid = 
                 {(ex_ctrl_we & ex_valid & (ex_rd_num == 5'd2) & (ex_fwd_src<1)), 
-                 (mem_ctrl_we & mem_valid & (mem_rd_num == 5'd2) & (mem_fwd_src<2)),
-                 (wb_ctrl_we & wb_valid & (wb_rd_num == 5'd2))};
+                 (mem_ctrl_we & mem_valid & (mem_rd_num == 5'd2) & (mem_fwd_src<2)
+                 & ~(ex_ctrl_we & ex_valid & (ex_rd_num == 5'd2))),
+                 (wb_ctrl_we & wb_valid & (wb_rd_num == 5'd2)
+                 & ~(ex_ctrl_we & ex_valid & (ex_rd_num == 5'd2))
+                 & ~(mem_ctrl_we & mem_valid & (mem_rd_num == 5'd2)))};
 
    fowardingUnit regData(.fwd_rs_data  (fwd_rs_data),
                          .fwd_rt_data  (fwd_rt_data),
@@ -254,12 +262,11 @@ module mips_core(/*AUTOARG*/
                          .rt_data      (rt_data),
                          .valid_fwd_rs (fwd_rs_valid),
                          .valid_fwd_rt (fwd_rt_valid),
+                         .valid_fwd_sys(fwd_sys_valid & {2'b11,ctrl_Sys}),
                          .ex_fwd_src   (ex_fwd_src),
                          .mem_fwd_src  (mem_fwd_src),
                          .wb_fwd_src   (wb_fwd_src),
                          .shiftVal      (shiftVal),
-                         .mem_shiftVal  (mem_shiftVal),
-                         .wb_shiftVal   (wb_shiftVal),
                          .ld_mem_data   (ld_mem_data), 
                          .wb_ld_mem_data(wb_ld_mem_data),
                          .mult__data    (mult__data),
@@ -360,8 +367,7 @@ module mips_core(/*AUTOARG*/
    register #(1, 1'bx) EX_MEM_Reg15(mem_leftShift,ex_leftShift,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 1'bx) EX_MEM_Reg16(mem_arithShift,ex_arithShift,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 0) EX_MEM_Reg17(mem_syscall_halt,syscall_halt,clk, ~internal_halt, 1'b0, rst_b);
-   register #(32, 0) EX_MEM_Reg18(mem_shiftVal,shiftVal,clk, ~internal_halt, 1'b0, rst_b);
-   register #(2, 2'hx) EX_MEM_Reg19(mem_fwd_src,ex_fwd_src,clk, ~internal_halt, 1'b0, rst_b);/*}}}*/
+   register #(2, 2'hx) EX_MEM_Reg18(mem_fwd_src,ex_fwd_src,clk, ~internal_halt, 1'b0, rst_b);/*}}}*/
 
    //Memory Module/*{{{*/
 
@@ -391,8 +397,7 @@ module mips_core(/*AUTOARG*/
    register #(1, 1'bx) MEM_WB_Reg13(wb_leftShift,mem_leftShift,clk, ~internal_halt, 1'b0, rst_b); 
    register #(1, 1'bx) MEM_WB_Reg14(wb_arithShift,mem_arithShift,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 0) MEM_WB_Reg15(wb_syscall_halt,mem_syscall_halt,clk, ~internal_halt, 1'b0, rst_b);
-   register #(32, 0) MEM_WB_Reg16(wb_shiftVal,mem_shiftVal,clk, ~internal_halt, 1'b0, rst_b);
-   register #(2, 2'hx) MEM_WB_Reg17(wb_fwd_src,mem_fwd_src,clk, ~internal_halt, 1'b0, rst_b);
+   register #(2, 2'hx) MEM_WB_Reg16(wb_fwd_src,mem_fwd_src,clk, ~internal_halt, 1'b0, rst_b);
 /*}}}*/
 
    //Write Back/*{{{*/
@@ -746,10 +751,10 @@ module memLoader (dataOut,mem_we, dataIn, sel,ldType, enable);
 endmodule/*}}}*/
 
 module fowardingUnit (fwd_rs_data, fwd_rt_data,/*{{{*/
-                         valid_fwd_rs,valid_fwd_rt,
+                         valid_fwd_rs,valid_fwd_rt,valid_fwd_sys,
                          ex_fwd_src,mem_fwd_src,wb_fwd_src,
                          rs_data,rt_data,
-                         shiftVal,mem_shiftVal,wb_shiftVal,
+                         shiftVal,
                          ld_mem_data, wb_ld_mem_data,
                          mult__data, mem_mult__data, wb_mult__data,
                          alu__out,mem_alu__out,wb_alu__out);
@@ -757,16 +762,18 @@ module fowardingUnit (fwd_rs_data, fwd_rt_data,/*{{{*/
     output [31:0]        fwd_rs_data, fwd_rt_data; 
     reg    [31:0]        fwd_rs_data, fwd_rt_data; 
     input  [31:0]        ld_mem_data, wb_ld_mem_data,
-                         shiftVal,mem_shiftVal,wb_shiftVal,
+                         shiftVal,
                          mult__data, mem_mult__data, wb_mult__data,
                          alu__out,mem_alu__out,wb_alu__out;
-    input  [2:0]         valid_fwd_rs, valid_fwd_rt;
+    input  [2:0]         valid_fwd_rs, valid_fwd_rt,valid_fwd_sys;
     input  [1:0]         ex_fwd_src,mem_fwd_src,wb_fwd_src;
     input  [31:0]        rs_data, rt_data;
 
     always @ * begin
         if ((valid_fwd_rs==3'b100)||(valid_fwd_rs==3'b101)||
-            (valid_fwd_rs==3'b110)||(valid_fwd_rs==3'b111)) begin
+            (valid_fwd_rs==3'b110)||(valid_fwd_rs==3'b111)||
+            (valid_fwd_sys==3'b100)||(valid_fwd_sys==3'b101)||
+            (valid_fwd_sys==3'b110)||(valid_fwd_sys==3'b111)) begin
             if(ex_fwd_src == 0)
                 fwd_rs_data = alu__out;
             else if(ex_fwd_src == 1)
@@ -774,7 +781,8 @@ module fowardingUnit (fwd_rs_data, fwd_rt_data,/*{{{*/
             else
                 fwd_rs_data = rs_data;
         end
-        else if ((valid_fwd_rs==3'b010)||(valid_fwd_rs==3'b011)) begin
+        else if ((valid_fwd_rs==3'b010)||(valid_fwd_rs==3'b011)||
+                (valid_fwd_sys==3'b010)||(valid_fwd_sys==3'b011)) begin
             if(mem_fwd_src == 0)
                 fwd_rs_data = mem_alu__out;
             else if(mem_fwd_src == 1)
@@ -784,7 +792,7 @@ module fowardingUnit (fwd_rs_data, fwd_rt_data,/*{{{*/
             else
                 fwd_rs_data = rs_data;
         end
-        else if(valid_fwd_rs==3'b001) begin
+        else if(valid_fwd_rs==3'b001 || valid_fwd_sys==3'b001) begin
             if(wb_fwd_src == 0)
                 fwd_rs_data = wb_alu__out;
             else if((wb_fwd_src == 1))
@@ -792,7 +800,7 @@ module fowardingUnit (fwd_rs_data, fwd_rt_data,/*{{{*/
             else if(wb_fwd_src == 2)
                 fwd_rs_data = wb_ld_mem_data;
             else if(wb_fwd_src == 3)
-                fwd_rs_data = wb_shiftVal;
+                fwd_rs_data = shiftVal;
             else
                 fwd_rs_data = rs_data;
         end
@@ -826,12 +834,13 @@ module fowardingUnit (fwd_rs_data, fwd_rt_data,/*{{{*/
             else if(wb_fwd_src == 2)
                 fwd_rt_data = wb_ld_mem_data;
             else if(wb_fwd_src == 3)
-                fwd_rt_data = wb_shiftVal;
+                fwd_rt_data = shiftVal;
             else
                 fwd_rt_data = rt_data;
         end
         else 
             fwd_rt_data = rt_data;
+
     end
 endmodule 
 /*}}}*/
@@ -853,9 +862,9 @@ module stall_unit(stall, /*{{{*/
     reg [31:0] valid;
     reg [2:0] count[31:0];
 
-    assign stall = ( ~valid[dcd_rs] & ~(&{fwd_rs_valid}))
-                   || ( ~valid[dcd_rt] & ~(&{fwd_rt_valid}))
-                   || ( ctrl_Sys & ~valid[2] & ~(&{fwd_sys_valid}));
+    assign stall = ( ~valid[dcd_rs] & ~(|{fwd_rs_valid}))
+                   || ( ~valid[dcd_rt] & ~(|{fwd_rt_valid}))
+                   || ( ctrl_Sys & ~valid[2] & ~(|{fwd_sys_valid}));
     
     always @ (posedge clk, negedge rst_b) begin
         if(~rst_b) begin
