@@ -74,8 +74,8 @@ module mips_decode(/*AUTOARG*/
    input       [4:0] dcd_rd, dcd_rt;
    output reg        ctrl_we, ctrl_Sys, ctrl_RI, isImm, isShift,mult_act,
    					 leftShift, arithShift, en_memLd, memToReg,isLui, isSe;
-   output reg  [1:0] regDest;
-   output reg  [2:0] ldType, fwd_src,mult_op;
+   output reg  [1:0] regDest, fwd_src;
+   output reg  [2:0] ldType,mult_op;
    output reg  [3:0] alu__sel;
 
 	always @(*) begin
@@ -95,7 +95,7 @@ module mips_decode(/*AUTOARG*/
 		ldType = 3'hx;
 		mult_act = 1'b0;
         mult_op  = 3'hx;
-        fwd_src = 3'hx;
+        fwd_src = 2'hx;
 		case(dcd_op)
 			`OP_OTHER0:
 				case(dcd_funct2)
@@ -108,7 +108,7 @@ module mips_decode(/*AUTOARG*/
 						ctrl_we = 1'b1;
 						regDest = `RD;
 						isImm = 1'b0;
-                        fwd_src = 3'd0;
+                        fwd_src = 2'd0;
 					end
 					`OP0_ADDU:
 					begin
@@ -116,7 +116,7 @@ module mips_decode(/*AUTOARG*/
 						ctrl_we = 1'b1;
 						regDest = `RD;
 						isImm = 1'b0;
-                        fwd_src = 3'd0;
+                        fwd_src = 2'd0;
 					end
 					`OP0_AND:
 					begin
@@ -124,7 +124,7 @@ module mips_decode(/*AUTOARG*/
 						ctrl_we = 1'b1;
 						regDest = `RD;
 						isImm = 1'b0;
-                        fwd_src = 3'd0;
+                        fwd_src = 2'd0;
 					end
 					`OP0_NOR:
 					begin
@@ -132,7 +132,7 @@ module mips_decode(/*AUTOARG*/
 						ctrl_we = 1'b1;
 						regDest = `RD;
 						isImm = 1'b0;	
-                        fwd_src = 3'd0;
+                        fwd_src = 2'd0;
 					end
 					`OP0_OR:
 					begin
@@ -140,7 +140,7 @@ module mips_decode(/*AUTOARG*/
 						ctrl_we = 1'b1;
 						regDest = `RD;
 						isImm = 1'b0;	
-                        fwd_src = 3'd0;
+                        fwd_src = 2'd0;
 					end
 					`OP0_SUB:
 					begin
@@ -148,7 +148,7 @@ module mips_decode(/*AUTOARG*/
 						ctrl_we = 1'b1;
 						regDest = `RD;
 						isImm = 1'b0;	
-                        fwd_src = 3'd0;
+                        fwd_src = 2'd0;
 					end
 					`OP0_SUBU:
 					begin
@@ -156,7 +156,7 @@ module mips_decode(/*AUTOARG*/
 						ctrl_we = 1'b1;
 						regDest = `RD;
 						isImm = 1'b0;	
-                        fwd_src = 3'd0;
+                        fwd_src = 2'd0;
 					end
 					`OP0_XOR:
 					begin
@@ -164,7 +164,7 @@ module mips_decode(/*AUTOARG*/
 						ctrl_we = 1'b1;
 						regDest = `RD;
 						isImm = 1'b0;	
-                        fwd_src = 3'd0;
+                        fwd_src = 2'd0;
 					end
 					`OP0_SLL:
 					begin
@@ -174,7 +174,7 @@ module mips_decode(/*AUTOARG*/
 						regDest = `RD;
 						isImm = 1'b1;
 						ctrl_we = 1'b1;
-                        fwd_src = 3'd1;
+                        fwd_src = 2'd3;
 					end
 					`OP0_SLLV:
 					begin
@@ -184,7 +184,7 @@ module mips_decode(/*AUTOARG*/
 						regDest = `RD;
 						isImm = 1'b0;
 						ctrl_we = 1'b1;
-                        fwd_src = 3'd1;
+                        fwd_src = 2'd3;
 					end
 					`OP0_SRA:
 					begin
@@ -194,7 +194,7 @@ module mips_decode(/*AUTOARG*/
 						regDest = `RD;
 						isImm = 1'b1;
 						ctrl_we = 1'b1;
-                        fwd_src = 3'd1;
+                        fwd_src = 2'd3;
 					end
 					`OP0_SRAV:
 					begin
@@ -204,7 +204,7 @@ module mips_decode(/*AUTOARG*/
 						regDest = `RD;
 						isImm = 1'b0;
 						ctrl_we = 1'b1;
-                        fwd_src = 3'd1;
+                        fwd_src = 2'd3;
 					end
 					`OP0_SRL:
 					begin
@@ -214,7 +214,7 @@ module mips_decode(/*AUTOARG*/
 						regDest = `RD;
 						isImm = 1'b1;
 						ctrl_we = 1'b1;
-                        fwd_src = 3'd1;
+                        fwd_src = 2'd3;
 					end
 					`OP0_SRLV:
 					begin
@@ -224,7 +224,7 @@ module mips_decode(/*AUTOARG*/
 						regDest = `RD;
 						isImm = 1'b0;
 						ctrl_we = 1'b1;
-                        fwd_src = 3'd1;
+                        fwd_src = 2'd3;
 					end
 					`OP0_SLT:
 					begin
@@ -232,7 +232,7 @@ module mips_decode(/*AUTOARG*/
 						ctrl_we = 1'b1;
 						regDest = `RD;
 						isImm = 1'b0;	
-                        fwd_src = 3'd0;
+                        fwd_src = 2'd0;
 					end
 					`OP0_SLTU:
 					begin
@@ -240,7 +240,7 @@ module mips_decode(/*AUTOARG*/
 						ctrl_we = 1'b1;
 						regDest = `RD;
 						isImm = 1'b0;	
-                        fwd_src = 3'd0;
+                        fwd_src = 2'd0;
 					end
                     `OP0_MFHI:    
 					begin
@@ -249,7 +249,7 @@ module mips_decode(/*AUTOARG*/
 						regDest = `RD;
                         isShift = 1'b1;
                         memToReg = 1'b1;
-                        fwd_src = 3'd2;
+                        fwd_src = 2'd1;
 					end
                     `OP0_MTHI:    
 					begin
@@ -258,7 +258,7 @@ module mips_decode(/*AUTOARG*/
 						regDest = `RD;
                         isShift = 1'b1;
                         memToReg = 1'b1;
-                        fwd_src = 3'd2;
+                        fwd_src = 2'd1;
 					end
                     `OP0_MFLO:    
 					begin
@@ -267,7 +267,7 @@ module mips_decode(/*AUTOARG*/
 						regDest = `RD;
                         isShift = 1'b1;
                         memToReg = 1'b1;
-                        fwd_src = 3'd2;
+                        fwd_src = 2'd1;
 					end
                     `OP0_MTLO:    
 					begin
@@ -276,7 +276,7 @@ module mips_decode(/*AUTOARG*/
 						regDest = `RD;
                         isShift = 1'b1;
                         memToReg = 1'b1;
-                        fwd_src = 3'd2;
+                        fwd_src = 2'd1;
 					end
                     `OP0_MULT:    
 					begin
@@ -285,7 +285,7 @@ module mips_decode(/*AUTOARG*/
 						regDest = `RD;
                         isShift = 1'b1;
                         memToReg = 1'b1;
-                        fwd_src = 3'd2;
+                        fwd_src = 2'd1;
 					end
                     `OP0_MULTU:
 					begin
@@ -294,7 +294,7 @@ module mips_decode(/*AUTOARG*/
 						regDest = `RD;
                         isShift = 1'b1;
                         memToReg = 1'b1;
-                        fwd_src = 3'd2;
+                        fwd_src = 2'd1;
 					end
 					default:
 						ctrl_RI = 1'b1;
@@ -306,7 +306,7 @@ module mips_decode(/*AUTOARG*/
 				regDest = `RT;
 				isImm = 1'b1;
 				isSe = 1'b1;
-                fwd_src = 3'd0;
+                fwd_src = 2'd0;
 			end
 			`OP_ADDIU:
 			begin
@@ -315,7 +315,7 @@ module mips_decode(/*AUTOARG*/
 				regDest = `RT;
 				isImm = 1'b1;
 				isSe = 1'b1;
-                fwd_src = 3'd0;
+                fwd_src = 2'd0;
 			end
 			`OP_ANDI:
 			begin
@@ -324,7 +324,7 @@ module mips_decode(/*AUTOARG*/
 				regDest = `RT;
 				isImm = 1'b1;
 				isSe = 1'b0;
-                fwd_src = 3'd0;
+                fwd_src = 2'd0;
 			end
 			`OP_ORI:
 			begin
@@ -333,7 +333,7 @@ module mips_decode(/*AUTOARG*/
 				regDest = `RT;
 				isImm = 1'b1;	
 				isSe = 1'b0;
-                fwd_src = 3'd0;
+                fwd_src = 2'd0;
 			end
 			`OP_XORI:
 			begin
@@ -342,7 +342,7 @@ module mips_decode(/*AUTOARG*/
 				regDest = `RT;
 				isImm = 1'b1;	
 				isSe = 1'b0;
-                fwd_src = 3'd0;
+                fwd_src = 2'd0;
 			end
 			`OP_SLTI:
 			begin
@@ -351,7 +351,7 @@ module mips_decode(/*AUTOARG*/
 				regDest = `RT;
 				isImm = 1'b1;	
 				isSe = 1'b1;
-                fwd_src = 3'd0;
+                fwd_src = 2'd0;
 			end
 			`OP_SLTIU:
 			begin
@@ -360,7 +360,7 @@ module mips_decode(/*AUTOARG*/
 				regDest = `RT;
 				isImm = 1'b1;	
 				isSe = 1'b1;
-                fwd_src = 3'd0;
+                fwd_src = 2'd0;
 			end
 			`OP_LUI:
 			begin
@@ -374,7 +374,7 @@ module mips_decode(/*AUTOARG*/
 				leftShift = 1'b1;
 				arithShift = 1'b0;
 				isSe = 1'b0;
-                fwd_src = 3'd4;
+                fwd_src = 2'd3;
 			end
 			`OP_LB:
 			begin
@@ -386,7 +386,7 @@ module mips_decode(/*AUTOARG*/
 				isSe = 1'b1;
 				en_memLd = 1'b0;
 				ldType = `MEM_BYTE;
-                fwd_src = 3'd3;
+                fwd_src = 2'd2;
 			end
 			`OP_LBU:
 			begin
@@ -398,7 +398,7 @@ module mips_decode(/*AUTOARG*/
 				isSe = 1'b1;
 				en_memLd = 1'b0;
 				ldType = `MEM_U_BYTE;
-                fwd_src = 3'd3;
+                fwd_src = 2'd2;
 			end
 			`OP_LH:
 			begin
@@ -410,7 +410,7 @@ module mips_decode(/*AUTOARG*/
 				isSe = 1'b1;
 				en_memLd = 1'b0;
 				ldType = `MEM_HALF;
-                fwd_src = 3'd3;
+                fwd_src = 2'd2;
 			end
 			`OP_LHU:
 			begin
@@ -422,7 +422,7 @@ module mips_decode(/*AUTOARG*/
 				isSe = 1'b1;
 				en_memLd = 1'b0;
 				ldType = `MEM_U_HALF;
-                fwd_src = 3'd3;
+                fwd_src = 2'd2;
 			end
 			`OP_LW:
 			begin
@@ -434,7 +434,7 @@ module mips_decode(/*AUTOARG*/
 				isSe = 1'b1;
 				en_memLd = 1'b0;
 				ldType = `MEM_WORD;
-                fwd_src = 3'd3;
+                fwd_src = 2'd2;
 			end
 			`OP_SB:
 			begin
