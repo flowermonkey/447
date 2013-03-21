@@ -65,7 +65,8 @@ module mips_decode(/*AUTOARG*/
    // Outputs
    ctrl_we, ctrl_Sys, ctrl_RI, regDest, isImm, isShift, leftShift,
    arithShift, en_memLd, memToReg, isLui, isSe, ldType, alu__sel,
-   mult_act,fwd_src,mult_op,
+   isJal, isBranch, isALU, mult_act,fwd_src,mult_op,
+   jump,link,
    // Inputs
    dcd_op, dcd_funct2,dcd_rd, dcd_rt
    );
@@ -73,7 +74,8 @@ module mips_decode(/*AUTOARG*/
    input       [5:0] dcd_op, dcd_funct2;
    input       [4:0] dcd_rd, dcd_rt;
    output reg        ctrl_we, ctrl_Sys, ctrl_RI, isImm, isShift,mult_act,
-   					 leftShift, arithShift, en_memLd, memToReg,isLui, isSe;
+   					 leftShift, arithShift, en_memLd, memToReg,isLui, isSe,
+                     isJal, isBranch, isALU, jump,link;
    output reg  [1:0] regDest, fwd_src;
    output reg  [2:0] ldType,mult_op;
    output reg  [3:0] alu__sel;
@@ -96,6 +98,11 @@ module mips_decode(/*AUTOARG*/
 		mult_act = 1'b0;
         mult_op  = 3'hx;
         fwd_src = 2'hx;
+        isJal = 1'b0;
+        isALU = 1'b0;
+        isBranch = 1'b0;
+	    jump = 1'b0;
+        link = 1'b0;
 		case(dcd_op)
 			`OP_OTHER0:
 				case(dcd_funct2)
@@ -296,6 +303,82 @@ module mips_decode(/*AUTOARG*/
                         memToReg = 1'b1;
                         fwd_src = 2'd1;
 					end
+                    `OP0_JALR:
+					begin
+						alu__sel = `ALU_ADD;
+						isImm = 1'b0;
+						isALU = 1'b1;
+						isJal = 1'b0;
+						ctrl_we = 1'b1;
+						regDest = (dcd_rd==5'd0) ? `R31 : `RD;
+                        link = 1'b1;
+						jump = 1'b1;
+					end
+					`OP0_JR:
+					begin
+						alu__sel = `ALU_ADD;
+						isImm = 1'b0;
+						isJal = 1'b0;
+						isALU = 1'b1;
+						jump = 1'b1;
+					end
+					default:
+						ctrl_RI = 1'b1;
+				endcase
+            `OP_OTHER1:
+				case (dcd_rt)
+					`OP1_BGEZ:
+					begin
+						//ALU
+						alu__sel = `ALU_BGE;
+						isImm = 1'b0;
+						//PC Data Select
+						isALU = 1'b1;
+						isJal = 1'b1;
+						isBranch = 1'b1;
+						jump = 1'b0;
+					end
+					`OP1_BGEZAL:
+					begin
+						//ALU
+						alu__sel = `ALU_BGE;
+						isImm = 1'b0;
+						//Write Data Select
+						ctrl_we = 1'b1;
+						regDest = `R31;
+                        link = 1'b1;
+						//PC Data Select
+						isALU = 1'b0;
+						isJal = 1'b0;
+						isBranch = 1'b1;
+						jump = 1'b0;
+					end
+					`OP1_BLTZ:
+					begin
+						//ALU select
+						alu__sel = `ALU_BL;
+						isImm = 1'b0;
+						//PC signal select
+						isALU = 1'b1;
+						isJal = 1'b1;
+						isBranch = 1'b1;
+						jump = 1'b0;
+					end
+					`OP1_BLTZAL:
+					begin
+						//ALU select
+						alu__sel = `ALU_BL;
+						isImm = 1'b0;
+						//Write Data Select
+						ctrl_we = 1'b1;
+						regDest = `R31;
+                        link = 1'b1;
+						//PC signal select
+						isALU = 1'b0;
+						isJal = 1'b0;
+						isBranch = 1'b1;
+						jump = 1'b0;
+					end
 					default:
 						ctrl_RI = 1'b1;
 				endcase
@@ -465,8 +548,65 @@ module mips_decode(/*AUTOARG*/
 			end
             `OP_NOP:
             begin
-                ctrl_RI = 1'b1;                 
+                ctrl_RI = 1'b0;                 
             end
+            `OP_J:
+			begin
+				isJal = 1'b1;
+				jump = 1'b1;
+			end
+			`OP_JAL:
+			begin
+				isJal = 1'b1;
+				ctrl_we = 1'b1;
+				regDest = `R31;
+				jump = 1'b1;
+                link = 1'b1;
+			end
+			`OP_BEQ:
+			begin
+				//ALU select
+				alu__sel = `ALU_BEQ;
+				isImm = 1'b0;
+				//PC signal select
+				isALU = 1'b0;
+				isJal = 1'b0;
+				isBranch = 1'b1;
+				jump = 1'b0;
+			end
+			`OP_BGTZ:
+			begin
+				//ALU select
+				alu__sel = `ALU_BG;
+				isImm = 1'b0;
+				//PC signal select
+				isALU = 1'b0;
+				isJal = 1'b0;
+				isBranch = 1'b1;
+				jump = 1'b0;
+			end
+			`OP_BLEZ:
+			begin
+				//ALU select
+				alu__sel = `ALU_BLE;
+				isImm = 1'b0;
+				//PC signal select
+				isALU = 1'b0;
+				isJal = 1'b0;
+				isBranch = 1'b1;
+				jump = 1'b0;
+			end
+			`OP_BNE:
+			begin
+				//ALU select
+				alu__sel = `ALU_BNE;
+				isImm = 1'b0;
+				//PC signal select
+				isALU = 1'b0;
+				isJal = 1'b0;
+				isBranch = 1'b1;
+				jump = 1'b0;
+			end	
 			default:
 			begin
 				ctrl_RI = 1'b1;

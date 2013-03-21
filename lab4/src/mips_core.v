@@ -83,10 +83,14 @@ module mips_core(/*AUTOARG*/
    wire [31:0]   pc, nextpc, nextnextpc;
    wire          exception_halt, syscall_halt, internal_halt;
    wire          load_epc, load_bva, load_bva_sel;
-   wire [31:0]   rt_data, rs_data, rd_data, alu__out, r_v0;
+   wire [31:0]   rt_data, rs_data, rd_data, rd_data_1, alu__out;
    wire [31:0]   epc, cause, bad_v_addr;
    wire [4:0]    cause_code;
    wire          stall; 
+
+   wire [31:0]   jalPC1, jalPC2;
+   wire [31:0]   nextJalPC1, nextJalPC2;
+   wire		   	 brnch;
 
    // Decode signals
    wire [31:0]   dcd_se_imm, dcd_se_offset, dcd_e_imm, dcd_se_mem_offset;
@@ -99,7 +103,9 @@ module mips_core(/*AUTOARG*/
    wire [4:0]    rd_num,rs_num;
    wire [31:0]   shiftVal;	
    wire [31:0]   fwd_rs_data, fwd_rt_data;
-   
+   wire		   	 isJal;
+   wire		   	 jump;
+
    //Execute signals
    wire [31:0] alu__op2,immVal,mult__data;
 
@@ -141,22 +147,42 @@ module mips_core(/*AUTOARG*/
    wire          ex_mult_act;
    wire [31:0]   mem_mult__data, wb_mult__data;
    wire [1:0]    ex_fwd_src, mem_fwd_src, wb_fwd_src;
+   wire          ex_isJal;
+   wire          ex_isALU;
+   wire          isBranch, ex_isBranch;
+   wire [31:0]   dcd_pc,ex_pc;
+   wire [25:0]   ex_target;
+   wire [31:0]   ex_se_offset;
+   wire [31:0]   dcd_nextpc,ex_nextpc, mem_nextpc, wb_nextpc;
+   wire		   	 ex_jump, mem_jump, wb_jump;
 
    // Fetch/*{{{*/
    
    // PC Management
-   register #(32, text_start) PCReg(pc, nextpc, clk, ~stall,
-                                       1'b0, rst_b);
-   register #(32, text_start+4) PCReg2(nextpc, nextnextpc, clk,
-                                       ~stall,1'b0, rst_b);
+   register #(32, text_start) PCReg(pc,jalPC2, clk, ~stall, 1'b0, rst_b);
+   mux2_1 #(32) nextPC2(jalPC2, ex_nextpc,jalPC1, (ex_isBranch & ex_valid & ~brnch)); 
+   mux4_1 #(32) nextPC1(jalPC1, nextpc, {ex_pc[31:28],ex_target,2'd0}, 
+   						alu__out, ex_pc+4+ex_se_offset, {(ex_isALU||brnch),(ex_isJal||brnch)});
+
+   register #(32, text_start+4) PCReg2(nextpc, nextJalPC2, clk, ~stall,1'b0, rst_b);
+   mux2_1 #(32) nextnextPC2(nextJalPC2, ex_nextpc+4,nextJalPC1, (ex_isBranch & ex_valid & ~brnch)); 
+   mux2_1 #(32) nextnextPC1(nextJalPC1,jalPC2+4,nextnextpc,
+  							({(ex_isALU||brnch),(ex_isJal||brnch)} > 2'b0));
+
    add_const #(4) NextPCAdder(nextnextpc, nextpc);
+
    assign        inst_addr = pc[31:2];
    assign        valid_state = (pc!=0);
+   assign 		 brnch = ex_isBranch && alu__out[0];
 /*}}}*/
 
    //FETCH-DECODE PIPLELINE REGISTERS/*{{{*/
-   register #(1, 0) FT_ID_Validbit(dcd_valid,valid_state,clk, ~internal_halt,1'b0, rst_b);
-   register #(32, 32'h14000000) FT_ID_Reg0(dcd_inst,inst,clk, ~stall, 1'b0, rst_b); /*}}}*/
+   register #(1, 0) FT_ID_Validbit(dcd_valid,valid_state,clk,~stall,
+                        ((isBranch&dcd_valid)|(ex_isBranch&ex_valid)|(jump&dcd_valid)|(ex_jump&ex_valid)), rst_b);
+   register #(32, 32'h50000000) FT_ID_Reg0(dcd_inst,inst,clk, ~stall, 1'b0, rst_b); 
+   register #(32, 0) FT_ID_Reg1(dcd_pc,pc,clk, ~stall, 1'b0, rst_b);
+   register #(32, 0) FT_ID_Reg2(dcd_nextpc,nextpc,clk, ~stall, 1'b0, rst_b); 
+   /*}}}*/
 
    // Instruction decoding/*{{{*/
    assign        dcd_op = dcd_inst[31:26];    // Opcode
@@ -198,6 +224,8 @@ module mips_core(/*AUTOARG*/
    wire	[1:0]	fwd_src;   		// From Decoder of mips_decode.v
    wire			mult_act;		// From Decoder of mips_decode.v
    wire	[2:0]	mult_op;		// From Decoder of mips_decode.v
+   wire		    isALU;	    	// From Decoder of mips_decode.v
+   wire		   	link;   		// From Decoder of mips_decode.v
    // End of automatics
 	
    // Generate control signals
@@ -220,6 +248,11 @@ module mips_core(/*AUTOARG*/
                .fwd_src     (fwd_src),
 		       .mult_act	(mult_act),
 		       .mult_op	    (mult_op),
+		       .isJal		(isJal),
+		       .isBranch	(isBranch),
+		       .isALU		(isALU),
+		       .jump		(jump),
+		       .link		(link),
 		       // Inputs
 		       .dcd_op		(dcd_op[5:0]),
 		       .dcd_funct2	(dcd_funct2[5:0]),
@@ -227,8 +260,9 @@ module mips_core(/*AUTOARG*/
 		       .dcd_rt	    (dcd_rt));
  
    mux4_1 #(5) writeReg(rd_num,dcd_rd,dcd_rt,5'd31,5'd31, regDest);
-   mux4_1 #(32) writeData(rd_data,wb_alu__out,wb_ld_mem_data, shiftVal,
+   mux4_1 #(32) writeData(rd_data_1,wb_alu__out,wb_ld_mem_data, shiftVal,
                             wb_mult__data, {wb_isShift,wb_memToReg});
+   mux2_1 #(32) writeData2(rd_data,wb_nextpc,rd_data_1, wb_link);
    mux2_1 #(5) syscallMux(rs_num,5'd2,dcd_rs, ctrl_Sys);
    
    //for Forwarding purposes/*{{{*/
@@ -262,7 +296,7 @@ module mips_core(/*AUTOARG*/
                          .rt_data      (rt_data),
                          .valid_fwd_rs (fwd_rs_valid),
                          .valid_fwd_rt (fwd_rt_valid),
-                         .valid_fwd_sys(fwd_sys_valid & {2'b11,ctrl_Sys}),
+                         .valid_fwd_sys(fwd_sys_valid & {ctrl_Sys,ctrl_Sys,ctrl_Sys}),
                          .ex_fwd_src   (ex_fwd_src),
                          .mem_fwd_src  (mem_fwd_src),
                          .wb_fwd_src   (wb_fwd_src),
@@ -286,8 +320,10 @@ module mips_core(/*AUTOARG*/
                  .fwd_rs_valid (fwd_rs_valid), 
                  .fwd_rt_valid (fwd_rt_valid), 
                  .fwd_sys_valid(fwd_sys_valid),
-                 .willWrite    (~stall & (ctrl_we)),
-                 .wroteBack    (wb_ctrl_we),
+                 .willWrite    (~stall & ctrl_we & dcd_valid),
+                 .wroteBack    (wb_ctrl_we & wb_valid),
+                 .isBranch     (ex_isBranch),
+                 .jump         (ex_jump),
                  .ctrl_Sys     (ctrl_Sys),
                  .clk          (clk),
                  .rst_b        (rst_b));
@@ -295,35 +331,42 @@ module mips_core(/*AUTOARG*/
     /*}}}*/
 
    //DECODE-EXECUTE PIPLELINE REGISERS/*{{{*/
-   register #(1, 0) ID_EX_Validbit(ex_valid,dcd_valid,clk, ~internal_halt, stall, rst_b);
-   register #(1, 0) ID_EX_Reg0(ex_ctrl_we,ctrl_we,clk, ~internal_halt, stall, rst_b);
-   register #(1, 0) ID_EX_Reg1(ex_ctrl_Sys,ctrl_Sys,clk, ~internal_halt, stall, rst_b);
-   register #(1, 1'bx) ID_EX_Reg2(ex_isImm,isImm,clk, ~internal_halt, stall, rst_b);
-   register #(1, 0) ID_EX_Reg3(ex_isShift,isShift,clk, ~internal_halt, stall, rst_b);
-   register #(1, 1'bx) ID_EX_Reg4(ex_leftShift,leftShift,clk, ~internal_halt,  stall, rst_b);
-   register #(1, 1'bx) ID_EX_Reg5(ex_arithShift,arithShift,clk, ~internal_halt, stall, rst_b);
-   register #(1, 1'bx) ID_EX_Reg6(ex_en_memLd,en_memLd,clk, ~internal_halt, stall, rst_b);
-   register #(1, 0) ID_EX_Reg7(ex_memToReg,memToReg,clk, ~internal_halt, stall, rst_b);
-   register #(1, 0) ID_EX_Reg8(ex_isLui,isLui,clk, ~internal_halt, stall, rst_b);
-   register #(1, 1'bx) ID_EX_Reg9(ex_isSe,isSe,clk, ~internal_halt, stall, rst_b);
-   register #(3, 3'hx) ID_EX_Reg10(ex_ldType,ldType,clk, ~internal_halt, stall, rst_b);
-   register #(4, 4'hx) ID_EX_Reg11(ex_alu__sel,alu__sel,clk, ~internal_halt, stall, rst_b);
-   register #(32, 0) ID_EX_Reg12(ex_rs_data,fwd_rs_data,clk, ~internal_halt, stall, rst_b);
-   register #(32, 0) ID_EX_Reg13(ex_rt_data,fwd_rt_data,clk, ~internal_halt, stall, rst_b);
-   register #(32, 0) ID_EX_Reg14(ex_e_imm,dcd_e_imm,clk, ~internal_halt, stall, rst_b);
-   register #(32, 0) ID_EX_Reg15(ex_se_imm,dcd_se_imm,clk, ~internal_halt, stall,rst_b);
-   register #(5, 0) ID_EX_Reg16(ex_shamt,dcd_shamt,clk, ~internal_halt, stall, rst_b);
-   register #(5, 0) ID_EX_Reg17(ex_rd_num,rd_num,clk, ~internal_halt, stall, rst_b); 
-   register #(5, 0) ID_EX_Reg18(ex_rs,dcd_rs,clk, ~internal_halt, stall, rst_b); 
-   register #(5, 0) ID_EX_Reg19(ex_rt,dcd_rt,clk, ~internal_halt, stall, rst_b); 
-   register #(1, 0) ID_EX_Reg20(ex_mult_act,mult_act,clk, ~internal_halt, stall, rst_b); 
-   register #(3, 0) ID_EX_Reg21(ex_mult_op,mult_op,clk, ~internal_halt, stall, rst_b); 
-   register #(2, 2'hx) ID_EX_Reg22(ex_fwd_src, fwd_src,clk, ~internal_halt, stall, rst_b); 
+   register #(1, 0) ID_EX_Validbit(ex_valid,dcd_valid,clk,~internal_halt,stall, rst_b);
+   register #(1, 0) ID_EX_Reg0(ex_ctrl_we,ctrl_we,clk,~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(1, 0) ID_EX_Reg1(ex_ctrl_Sys,ctrl_Sys,clk,~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(1, 1'bx) ID_EX_Reg2(ex_isImm,isImm,clk, ~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(1, 0) ID_EX_Reg3(ex_isShift,isShift,clk, ~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(1, 1'bx) ID_EX_Reg4(ex_leftShift,leftShift,clk,~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(1, 1'bx) ID_EX_Reg5(ex_arithShift,arithShift,clk,~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(1, 1'bx) ID_EX_Reg6(ex_en_memLd,en_memLd,clk, ~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(1, 0) ID_EX_Reg7(ex_memToReg,memToReg,clk, ~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(1, 0) ID_EX_Reg8(ex_isLui,isLui,clk, ~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(1, 1'bx) ID_EX_Reg9(ex_isSe,isSe,clk, ~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(3, 3'hx) ID_EX_Reg10(ex_ldType,ldType,clk, ~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(4, 4'hx) ID_EX_Reg11(ex_alu__sel,alu__sel,clk, ~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(32, 0) ID_EX_Reg12(ex_rs_data,fwd_rs_data,clk, ~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(32, 0) ID_EX_Reg13(ex_rt_data,fwd_rt_data,clk, ~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(32, 0) ID_EX_Reg14(ex_e_imm,dcd_e_imm,clk, ~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(32, 0) ID_EX_Reg15(ex_se_imm,dcd_se_imm,clk, ~internal_halt,(stall|~dcd_valid),rst_b);
+   register #(5, 0) ID_EX_Reg16(ex_shamt,dcd_shamt,clk, ~internal_halt,(stall|~dcd_valid), rst_b);
+   register #(5, 5'hxx) ID_EX_Reg17(ex_rd_num,rd_num,clk, ~internal_halt,(stall|~dcd_valid), rst_b); 
+   register #(5, 5'hxx) ID_EX_Reg18(ex_rs,dcd_rs,clk, ~internal_halt,(stall|~dcd_valid), rst_b); 
+   register #(5, 5'hxx) ID_EX_Reg19(ex_rt,dcd_rt,clk, ~internal_halt,(stall|~dcd_valid), rst_b); 
+   register #(1, 0) ID_EX_Reg20(ex_mult_act,mult_act,clk, ~internal_halt,(stall|~dcd_valid), rst_b); 
+   register #(3, 0) ID_EX_Reg21(ex_mult_op,mult_op,clk, ~internal_halt,(stall|~dcd_valid), rst_b); 
+   register #(2, 2'hx) ID_EX_Reg22(ex_fwd_src, fwd_src,clk, ~internal_halt,(stall|~dcd_valid), rst_b); 
+   register #(1, 1'b0) ID_EX_Reg23(ex_isJal, isJal,clk, ~internal_halt,(stall|~dcd_valid), rst_b); 
+   register #(1, 1'b0) ID_EX_Reg24(ex_isALU, isALU,clk, ~internal_halt,(stall|~dcd_valid), rst_b); 
+   register #(1, 1'b0) ID_EX_Reg25(ex_isBranch, isBranch,clk,~internal_halt,(stall|~dcd_valid), rst_b); 
+   register #(32, 0) ID_EX_Reg26(ex_pc, dcd_pc,clk,~internal_halt,(stall|~dcd_valid), rst_b); 
+   register #(32, 0) ID_EX_Reg27(ex_nextpc,dcd_nextpc,clk,~internal_halt,(stall|~dcd_valid), rst_b); 
+   register #(26, 26'hxxx_xxxx) ID_EX_Reg28(ex_target, dcd_target,clk,~internal_halt, (stall|~dcd_valid), rst_b); 
+   register #(32, 32'hxxxx_xxxx) ID_EX_Reg29(ex_se_offset, dcd_se_offset, clk,~internal_halt, (stall|~dcd_valid), rst_b); 
+   register #(1, 1'b0) ID_EX_Reg30(ex_jump, jump, clk, ~internal_halt, (stall|~dcd_valid), rst_b); 
+   register #(1, 1'b0) ID_EX_Reg31(ex_link, link, clk, ~internal_halt, (stall|~dcd_valid), rst_b); 
 /*}}}*/
 
    // Execute/*{{{*/
- 
-
    mips_ALU ALU(.alu__out(alu__out), 
                 .alu__op1(ex_rs_data),
                 .alu__op2(alu__op2),
@@ -356,9 +399,9 @@ module mips_core(/*AUTOARG*/
    register #(32, 0)EX_MEM_Reg4(mem_rt_data,ex_rt_data,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 1'bx) EX_MEM_Reg5(mem_en_memLd,ex_en_memLd,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 0) EX_MEM_Reg6(mem_memToReg,ex_memToReg,clk, ~internal_halt, 1'b0, rst_b);
-   register #(5, 0) EX_MEM_Reg7(mem_rd_num,ex_rd_num,clk, ~internal_halt, 1'b0, rst_b);
-   register #(5, 0) EX_MEM_Reg8(mem_rs,ex_rs,clk, ~internal_halt, 1'b0, rst_b);
-   register #(5, 0) EX_MEM_Reg9(mem_rt,ex_rt,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 5'hxx) EX_MEM_Reg7(mem_rd_num,ex_rd_num,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 5'hxx) EX_MEM_Reg8(mem_rs,ex_rs,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 5'hxx) EX_MEM_Reg9(mem_rt,ex_rt,clk, ~internal_halt, 1'b0, rst_b);
    register #(32, 0)EX_MEM_Reg10(mem_rs_data,ex_rs_data,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 0) EX_MEM_Reg11(mem_isShift,ex_isShift,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 0) EX_MEM_Reg12(mem_isLui,ex_isLui,clk, ~internal_halt, 1'b0, rst_b);
@@ -367,7 +410,11 @@ module mips_core(/*AUTOARG*/
    register #(1, 1'bx) EX_MEM_Reg15(mem_leftShift,ex_leftShift,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 1'bx) EX_MEM_Reg16(mem_arithShift,ex_arithShift,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 0) EX_MEM_Reg17(mem_syscall_halt,syscall_halt,clk, ~internal_halt, 1'b0, rst_b);
-   register #(2, 2'hx) EX_MEM_Reg18(mem_fwd_src,ex_fwd_src,clk, ~internal_halt, 1'b0, rst_b);/*}}}*/
+   register #(2, 2'hx) EX_MEM_Reg18(mem_fwd_src,ex_fwd_src,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) EX_MEM_Reg19(mem_nextpc,ex_nextpc,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'b0) EX_MEM_Reg20(mem_jump,ex_jump,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'b0) EX_MEM_Reg21(mem_link,ex_link,clk, ~internal_halt, 1'b0, rst_b);
+/*}}}*/
 
    //Memory Module/*{{{*/
 
@@ -381,7 +428,7 @@ module mips_core(/*AUTOARG*/
 
    //MEMORY-WRITE BACK PIPLELINE REGISTERS/*{{{*/
    register #(1, 0) MEM_WB_Validbit(wb_valid,mem_valid,clk, ~internal_halt, 1'b0, rst_b);
-   register #(5, 0) MEM_WB_Reg0(wb_rd_num,mem_rd_num,clk, ~internal_halt, 1'b0, rst_b);
+   register #(5, 5'hxx) MEM_WB_Reg0(wb_rd_num,mem_rd_num,clk, ~internal_halt, 1'b0, rst_b);
    register #(32, 0) MEM_WB_Reg1(wb_alu__out,mem_alu__out,clk, ~internal_halt, 1'b0, rst_b);
    register #(32, 0) MEM_WB_Reg2(wb_mult__data,mem_mult__data,clk, ~internal_halt, 1'b0, rst_b);
    register #(32, 0) MEM_WB_Reg3(wb_ld_mem_data,ld_mem_data,clk, ~internal_halt, 1'b0, rst_b);
@@ -398,6 +445,9 @@ module mips_core(/*AUTOARG*/
    register #(1, 1'bx) MEM_WB_Reg14(wb_arithShift,mem_arithShift,clk, ~internal_halt, 1'b0, rst_b);
    register #(1, 0) MEM_WB_Reg15(wb_syscall_halt,mem_syscall_halt,clk, ~internal_halt, 1'b0, rst_b);
    register #(2, 2'hx) MEM_WB_Reg16(wb_fwd_src,mem_fwd_src,clk, ~internal_halt, 1'b0, rst_b);
+   register #(32, 0) MEM_WB_Reg17(wb_nextpc,mem_nextpc,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'b0) MEM_WB_Reg18(wb_jump,mem_jump,clk, ~internal_halt, 1'b0, rst_b);
+   register #(1, 1'b0) MEM_WB_Reg19(wb_link,mem_link,clk, ~internal_halt, 1'b0, rst_b);
 /*}}}*/
 
    //Write Back/*{{{*/
@@ -423,7 +473,6 @@ module mips_core(/*AUTOARG*/
                                                     {wb_isLui,wb_isImm});
    shift_reg sr(shiftVal, shift_data, sa, wb_leftShift, wb_arithShift);/*}}}*/
 
-                 
    // Miscellaneous stuff (Exceptions, syscalls, and halt)
    exception_unit EU(.exception_halt(exception_halt), .pc(pc), .rst_b(rst_b),
                      .clk(clk), .load_ex_regs(load_ex_regs),
@@ -439,7 +488,7 @@ module mips_core(/*AUTOARG*/
                      .AdES(1'b0),
                      .CpU(1'b0));
 
-   assign        internal_halt = exception_halt | wb_syscall_halt;
+   assign        internal_halt = wb_syscall_halt;
    register #(1, 0) Halt(halted, internal_halt, clk, 1'b1, 1'b0, rst_b);
    register #(32, 0) EPCReg(epc, pc, clk, load_ex_regs, 1'b0, rst_b);
    register #(32, 0) CauseReg(cause,
@@ -614,8 +663,10 @@ module mux4_1 (out, in1, in2, in3, in4, sel);
 			out = in2;
 		else if(sel==2'b10)
 			out = in3;
-		else
+		else if(sel==2'b11)
 			out = in4;
+        else
+            out = 'hx;
 	end
 endmodule // mux4_1
 
@@ -850,13 +901,15 @@ module stall_unit(stall, /*{{{*/
                   dest, wb_dest,
                   fwd_rs_valid, fwd_rt_valid, fwd_sys_valid,
                   willWrite,wroteBack,ctrl_Sys, 
+                  isBranch, jump,
                   clk, rst_b);
 
     output            stall;
     input      [4:0]  dcd_rs, dcd_rt;
     input      [4:0]  dest, wb_dest;
     input             willWrite, wroteBack,
-                      ctrl_Sys, clk, rst_b;
+                      ctrl_Sys, clk, rst_b,
+                      isBranch, jump;
     input      [2:0]  fwd_rs_valid, fwd_rt_valid,fwd_sys_valid;
 
     reg [31:0] valid;
@@ -865,6 +918,7 @@ module stall_unit(stall, /*{{{*/
     assign stall = ( ~valid[dcd_rs] & ~(|{fwd_rs_valid}))
                    || ( ~valid[dcd_rt] & ~(|{fwd_rt_valid}))
                    || ( ctrl_Sys & ~valid[2] & ~(|{fwd_sys_valid}));
+                  // || (isBranch | jump);
     
     always @ (posedge clk, negedge rst_b) begin
         if(~rst_b) begin
