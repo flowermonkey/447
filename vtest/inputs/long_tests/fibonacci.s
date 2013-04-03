@@ -1,3 +1,4 @@
+main:
    lui $t0, 0x0010
 
    addiu $t1, 2

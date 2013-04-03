@@ -1,4 +1,5 @@
 .text
+main:
 addiu $t0, $0, 10
 bltz $t0, bad
 addiu $t0, $0, -10

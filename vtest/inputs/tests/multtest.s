@@ -39,7 +39,6 @@ bne $t3, $t5, bad
 lui $t0, 0xfedc
 ori $t0, $t0, 0xba98
 ori $t1, $0, 0x5678
-div $t0, $t1
 mfhi $t2
 mflo $t3
 lui $t4, 0xffff
@@ -50,7 +49,6 @@ ori $t9, $0, 0xfff7
 bne $t2, $t4, bad
 ori $t9, $0, 0xfff8
 bne $t3, $t5, bad
-divu $t0, $t1
 mfhi $t2
 mflo $t3
 ori $t4, $0, 0xf8
