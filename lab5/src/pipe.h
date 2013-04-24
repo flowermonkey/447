@@ -8,6 +8,8 @@
 
 #ifndef _PIPE_H_
 #define _PIPE_H_
+#define INSTR_ADDRESS 1
+#define DATA_ADDRESS 0
 
 #include "shell.h"
 
@@ -55,6 +57,9 @@ typedef struct Pipe_Op {
                              for unconditional, execute for conditional) */
     int is_link;          /* jump-and-link or branch-and-link inst? */
     int link_reg;         /* register to place link into? */
+    
+    uint32_t predicted_dir;
+    uint32_t predicted_dest;
 
 } Pipe_Op;
 
@@ -89,8 +94,18 @@ typedef struct Pipe_State {
     int multiplier_stall; /* number of remaining cycles until HI/LO are ready */
 
     /* place other information here as necessary */
-
+    
+    int stall_inst, stall_data;
+    uint32_t predicted_dest;
 } Pipe_State;
+
+typedef struct line_t{
+    uint32_t valid,tag,R;
+} line_t;
+
+typedef struct buffer_t{
+    uint32_t valid,tag,U,target;
+}buffer_t;
 
 /* global variable -- pipeline state */
 extern Pipe_State pipe;
@@ -113,4 +128,12 @@ void pipe_stage_execute();
 void pipe_stage_mem();
 void pipe_stage_wb();
 
+void cache_init();
+uint32_t cache_read (uint32_t addr, uint8_t isInst);
+void cache_updateLRU(uint8_t set, int newHit, uint8_t isInst);
+void cache_write(uint32_t addr, uint32_t data);
+
+uint32_t prediction(uint32_t branch_pc);
+void update_branch_predictions(uint32_t branch_pc, uint8_t taken, 
+                                uint8_t uncond, uint32_t target);
 #endif

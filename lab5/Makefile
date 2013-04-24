@@ -3,7 +3,7 @@ INPUT ?= $(wildcard 447inputs/*/*.x)
 
 .PHONY: all verify clean
 
-all: sim
+all: clean sim
 
 sim: $(SRC)
 	gcc -std=c99 -g -O2 $^ -o $@
