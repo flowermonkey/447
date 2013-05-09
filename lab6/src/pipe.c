@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-//#define DEBUG 
+#define DEBUG 
 #define GSHARE(X,Y) (uint8_t) (((0xFF)&(X)) ^ (((Y)>>0x2)&(0xFF)))
 #define BTB_IDX(X) (uint32_t) (((X)>>2) & (0x3FF))
 
@@ -36,9 +36,16 @@ Pipe_State pipe;
 /*Current state of Cache*/
 line_t instCache [64][4];
 line_t dataCache [256][8];
-    
+line_t L2[512][16];   
+
+/*MSHR*/
+mshr_t MSHR [16];
+uint8_t empty_mshr=0;
+queue_t memQ[16]; //suppose to be infinite, but for our pipe line this should be enough
+int8_t row_buf[8];
 
 /*Count for stalls*/
+int stall_time = 0;
 int instr_stall_count = 0;
 int data_stall_count = 0;
 
@@ -74,7 +81,7 @@ void pipe_cycle()
     int i;
 
 #ifdef DEBUG
-    printf("\n\n----\n\nPIPELINE:\n");
+    printf("\n\n----\n\nPIPELINE: (Cycle: %d)\n", stat_cycles);
     printf("DCODE: "); print_op(pipe.decode_op);
     printf("EXEC : "); print_op(pipe.execute_op);
     printf("MEM  : "); print_op(pipe.mem_op);
@@ -95,7 +102,6 @@ void pipe_cycle()
 #endif
 
         pipe.PC = pipe.branch_dest;
-
         
         if (pipe.branch_flush >= 2) {
             if (pipe.decode_op) free(pipe.decode_op);
@@ -134,7 +140,11 @@ void pipe_cycle()
             }
             if(pending_miss == 0){
                 pipe.stall_inst = 0;
-                instr_stall_count = 0;
+                if(pipe.mem_request == 0)
+                    instr_stall_count = 0;
+                else{
+                    instr_stall_count++;
+                }
             }
         }
         stat_squash++;
@@ -198,7 +208,7 @@ void pipe_stage_mem()
     uint32_t val = 0;
     if (op->is_mem)
         val = cache_read(op->mem_addr & ~3, 0);
-    if(pipe.stall_data)
+    if(val == -1)
         return;
 
     switch (op->opcode) {
@@ -257,7 +267,7 @@ void pipe_stage_mem()
             }
 
             cache_write(op->mem_addr & ~3, val);
-            if(pipe.stall_data)
+            if((pipe.stall_data == 1) || (pipe.Dstayout ==1))
                 return;
             break;
 
@@ -274,14 +284,14 @@ void pipe_stage_mem()
 #endif
 
             cache_write(op->mem_addr & ~3, val);
-            if(pipe.stall_data)
+            if((pipe.stall_data == 1) || (pipe.Dstayout ==1))
                 return;
             break;
 
         case OP_SW:
             val = op->mem_value;
             cache_write(op->mem_addr & ~3, val);
-            if(pipe.stall_data)
+            if((pipe.stall_data == 1) || (pipe.Dstayout ==1))
                 return;
             break;
     }
@@ -576,14 +586,6 @@ void pipe_stage_execute()
     }
 
     /* handle branch recoveries at this point */
-#ifdef DEBUG
-    printf("is_branch=%d\ndecode_predictedBR as=%d; calcedBRdir=%d\npredicted_dest=%08x, currPC=%08x\nbtb.valid[%d]=%d, btb[%d].tag=%08x\n",
-            op->is_branch, op->predicted_dir,op->branch_taken,
-            op->predicted_dest, op->branch_dest, 
-            BTB_IDX(op->pc),btb[BTB_IDX(op->pc)].valid,
-            BTB_IDX(op->pc),btb[BTB_IDX(op->pc)].tag);
-#endif
-
     if ((op->is_branch == 1) && 
             ((op->predicted_dir != op->branch_taken) ||
          //    (op->predicted_dest != op->branch_dest) if direction is diff.
@@ -656,7 +658,6 @@ void pipe_stage_decode()
             /* branches that have -and-link variants come here */
             op->is_branch = 1;
             op->reg_src1 = rs;
-            op->reg_src2 = rt;
             op->is_branch = 1;
             op->branch_cond = 1; /* conditional branch */
             op->branch_dest = op->pc + 4 + (se_imm16 << 2);
@@ -758,7 +759,7 @@ void pipe_stage_fetch()
     op->reg_src1 = op->reg_src2 = op->reg_dst = -1;
 
     op->instruction = cache_read(pipe.PC, 1);
-    if(pipe.stall_inst)
+    if(op->instruction == -1)
         return;
     op->pc = pipe.PC;
     
@@ -800,6 +801,42 @@ void cache_init()
             dataCache[i][j].tag = 0;
             dataCache[i][j].R = 0;
         }
+
+    for(i = 0; i<512; i++)
+        for(j = 0; j<16; j++){
+            L2[i][j].valid = 0; 
+            L2[i][j].tag = 0; 
+            L2[i][j].R = 0; 
+        }
+    
+    for(j = 0; j<16; j++){
+        MSHR[j].valid = 0;
+        MSHR[j].cacheAddr = 0;
+        MSHR[j].done = 0;
+        memQ[j].valid = 0;
+        memQ[j].done = 0;
+        memQ[j].stallTime = 0;
+    }
+
+    for(j = 0; j<8; j++){
+        row_buf[j] = -1;
+        pipe.DRAMbusy[j] = 0;
+    }
+
+    pipe.comLineBusy = 0;
+    pipe.addrLineBusy = 0;
+    pipe.dataLineBusy = 0;
+    pipe.curr_mshr = 0;
+    pipe.Istayout = 0;
+    pipe.Dstayout = 0;
+    pipe.mem_request = 0;
+    pipe.cDone1 = 0;
+    pipe.cDone2 = 0;
+    pipe.aDone = 0;
+    pipe.dDone1 =0;
+    pipe.dDone2 =0;
+    pipe.dDone3 =0;
+    pipe.datDone = 0;
 }
 
 uint32_t cache_read(uint32_t addr, uint8_t isInst)
@@ -808,6 +845,7 @@ uint32_t cache_read(uint32_t addr, uint8_t isInst)
     uint32_t memory [8];
     uint8_t set = (isInst == 1) ? ((addr>>5)  & 0x3F) : ((addr>>5) & 0xFF);
     uint32_t tag = (isInst == 1) ? ((addr>>11) & 0x1FFFFF) : ((addr>>13) & 0x7FFFF);
+    
     uint8_t lru_entry = 0;
     int evict = 0;
 
@@ -829,33 +867,13 @@ uint32_t cache_read(uint32_t addr, uint8_t isInst)
        }
     }
         
-    //If NOT FOUND, stall
-#ifdef DEBUG
-    printf("instr_stall_count=%d\ndata_stall_count=%d\n\n",
-            instr_stall_count,data_stall_count);
-#endif    
-    if(isInst == 1){
-        if(instr_stall_count <50){     
-            pipe.stall_inst = 1;
-            instr_stall_count++; 
-            return -1;
-        }
-        else{
-            pipe.stall_inst = 0;
-            instr_stall_count = 0;
-        }
-    }
-    else {   
-        if(data_stall_count <50){     
-            pipe.stall_data = 1;
-            data_stall_count++; 
-            return -1;
-        }
-        else{
-            pipe.stall_data = 0;
-            data_stall_count = 0;
-        }
-    }
+    //If NOT FOUND, request it from L2
+    L2_request(addr, isInst);
+    if ((pipe.stall_inst == 1) || (pipe.stall_data == 1)
+        || (pipe.Dstayout == 1) || (pipe.Istayout == 1))
+        return -1;
+
+    //Then, stall
     //Load new memory into cache
     if(isInst == 1){
         for(i=0;i<4;i++){
@@ -902,6 +920,436 @@ uint32_t cache_read(uint32_t addr, uint8_t isInst)
     return -1;
 }
 
+void L2_request(uint32_t addr, uint8_t isInst){
+    uint8_t L2_set = (addr >> 5) & 0x1FF;
+    uint32_t L2_tag = (addr >> 14) & 0x3FFFF;
+    uint8_t lru_entry = 0;
+    int i, evict = 0;
+    
+   // if(empty_mshr == 15){
+     //   return;
+    //}
+
+#ifdef DEBUG
+            printf("L2 requested");
+#endif
+    //Search for hit
+    for(i=0; i<16; i++){
+        if ((L2[L2_set][i].valid == 1) && (L2[L2_set][i].tag == L2_tag)){
+#ifdef DEBUG
+            printf("L2 Hit! @ set=%d, tag=0x%08x,\n",L2_set, L2_tag);
+#endif
+            stall_pipe(15, isInst);
+            if((pipe.stall_inst == 1) || (pipe.stall_data == 1))
+                return;
+            cache_updateLRU(L2_set,i,2);
+            return;
+        }
+    }
+    
+#ifdef DEBUG
+            printf("L2 Missed!\n");
+#endif
+    if(((pipe.mem_ibusy==0) && (isInst==1) &&
+        (pipe.insertingI==0)) ||
+        ((pipe.mem_dbusy==0) && (isInst==0) && 
+        (pipe.insertingD==0))){
+        
+#ifdef DEBUG
+            printf("No other stalls due to DRAM for same cache type...so create\
+inst=%d,MSHR\n", isInst);
+#endif
+
+        //Stall for Memory Controller Sim.
+        pipe.mem_request = 1;
+        stall_pipe(5, isInst);
+        if((pipe.stall_inst == 1) || (pipe.stall_data == 1))
+            return;
+        pipe.mem_request = 0;
+        //Send Memory Request
+        for(i=0; i<16; i++){
+            if(memQ[i].valid == 0){
+                memQ[i].addr = addr;
+                memQ[i].rank = i;
+                memQ[i].row = (addr>>16) & 0xFFFF;
+                memQ[i].bank = (addr>>5) & 0x7;
+                memQ[i].isInst = isInst;
+                memQ[i].valid = 1;
+                memQ[i].done = 0;
+                break;
+            }
+        }
+
+        //If a Miss, allocate MSHR
+        MSHR[empty_mshr].valid = 1;
+        MSHR[empty_mshr].cacheAddr = addr;
+        MSHR[empty_mshr].done = 0;
+        empty_mshr = (empty_mshr == 15) ? 0 : (empty_mshr + 1);
+        
+    }
+    
+    while((MSHR[pipe.curr_mshr].valid == 1) &&
+           (MSHR[pipe.curr_mshr].done == 0)){
+        
+        //prevent from another miss to disrupt count of other miss
+       /* if((pipe.stall_inst==1) && (isInst==0)){
+            pipe.Dstayout=1;
+            return;
+        }else if((pipe.stall_data==1) && (isInst==1)){
+            pipe.Istayout=1;
+            return;
+        }
+        */
+
+        //set values to stall
+#ifdef DEBUG
+            printf("Waiting for MSHR to clear in DRAM\n");
+#endif
+
+        if (isInst == 0){ 
+#ifdef DEBUG
+            printf("It is a data cache MSHR\n");
+#endif
+            if (pipe.stall_inst == 0){
+                pipe.mem_dbusy = checkDRAM(isInst);
+                pipe.stall_data = pipe.mem_dbusy;
+            }
+            else{
+#ifdef DEBUG
+            printf("Told to STAYOUT!\n");
+#endif
+                pipe.Dstayout=1;
+                return;
+            }
+        }
+        else if (isInst == 1){ 
+#ifdef DEBUG
+            printf("It is a instr cache MSHR\n");
+#endif
+            if (pipe.stall_data == 0){
+                pipe.mem_ibusy = checkDRAM(isInst);
+                pipe.stall_inst = pipe.mem_ibusy;
+            }
+            else{
+#ifdef DEBUG
+            printf("Told to STAYOUT!\n");
+#endif
+                pipe.Istayout=1 ;
+                return;
+            }
+        }
+
+        if((pipe.stall_inst == 1) || (pipe.stall_data == 1))
+            return;
+          
+#ifdef DEBUG
+            printf("DRAM Request forfilled!\n");
+#endif
+        //clean up possibily set values
+        if (pipe.mem_dbusy == 0) pipe.Istayout = 0;
+        if (pipe.mem_ibusy == 0) pipe.Dstayout = 0;
+    }
+
+    if((MSHR[pipe.curr_mshr].valid == 1) &&
+            (MSHR[pipe.curr_mshr].done == 1)){
+        
+#ifdef DEBUG
+            printf("Removing completed MSHR\n");
+       // printf("make it here\n");
+#endif
+        if(isInst == 0)
+            pipe.insertingD = 1;
+        else    
+            pipe.insertingI = 1;
+
+        stall_pipe(5, isInst);
+        if((pipe.stall_inst == 1) || (pipe.stall_data == 1))
+            return;
+    //    pipe.mem_request = 0;
+        
+        MSHR[pipe.curr_mshr].valid = 0;
+        MSHR[pipe.curr_mshr].done = 0;
+        pipe.curr_mshr = (pipe.curr_mshr == 15) ? 0 : (pipe.curr_mshr + 1);
+
+        if(isInst == 0)
+            pipe.insertingD = 0;
+        else    
+            pipe.insertingI = 0;
+        
+#ifdef DEBUG
+            printf("L2 INSERT! @ set=%d, tag=0x%08x,\n",L2_set, L2_tag);
+#endif
+
+        for(i=0;i<16;i++){
+            if(L2[L2_set][i].valid == 0){
+                cache_updateLRU(L2_set,i,2);
+                L2[L2_set][i].valid = 1;
+                L2[L2_set][i].tag = L2_tag;
+                return; 
+            }
+            else{
+                if (L2[L2_set][i].R > lru_entry){
+                    lru_entry = L2[L2_set][i].R;
+                    evict = i;
+                }
+            }
+        }
+        //If it does not fit, EVICT least-recetly-used entry
+        cache_updateLRU(L2_set,evict,2);
+        L2[L2_set][evict].valid = 1;
+        L2[L2_set][evict].tag = L2_tag;
+        return; 
+    }   
+}
+
+int checkDRAM(uint8_t isInst){
+    uint32_t remove = -1;
+    int i,j = 0;
+#ifdef DEBUG
+/*    for(j=0; j<5;j++)
+         printf("memQ[%d].valid,done,bank,row = %d,%d,%d,%d\n",j, memQ[j].valid,
+         memQ[j].done,memQ[j].bank, memQ[j].row);      
+  */  //printf("mem[0].valid.done = %d,%d \n", memQ[0].valid, memQ[0].done);
+#endif
+
+    if(((memQ[0].valid == 1) && (memQ[0].done == 1))
+        || memQ[0].valid == 0)
+        return 0;
+    //check row
+    //queue ComLine
+    //queue DRAM
+    //queue DataLine
+    //check next on queue for queue-ability
+
+    //case 1
+    if (row_buf[memQ[0].bank] == -1){
+        qComLine(0,pipe.cDone1,pipe.cDone2);
+        //if((pipe.comLineBusy != 0) && (cDone1 != 0))
+        //   return 1;
+        if(pipe.comLineBusy == 0)
+            pipe.cDone1 = 1;
+
+        qDRAM(memQ[0].bank,0,pipe.dDone1,pipe.dDone2,pipe.dDone3);
+        if((pipe.DRAMbusy[memQ[0].bank] != 0) && (pipe.dDone1 == 0))
+            return 1;
+        pipe.dDone1 = 1;
+
+        qAddrLine(pipe.aDone);
+        //if((pipe.addrLineBusy != 0))
+        //   return 1;
+        if(pipe.addrLineBusy == 0)
+            pipe.aDone = 1;
+
+        qDRAM(memQ[0].bank,1,pipe.dDone1,pipe.dDone2,pipe.dDone3);
+        if((pipe.DRAMbusy[memQ[0].bank] != 0) && (pipe.dDone2 == 0))
+            return 1;
+        pipe.dDone2 = 1;
+
+        qDataLine(pipe.datDone); 
+        if((pipe.dataLineBusy != 0))
+            return 1;
+        pipe.datDone = 1;
+
+        //update row buffer
+        row_buf[memQ[0].bank] = memQ[0].row;
+        //update memQ
+        memQ[0].done = 1;
+        //update MSHR
+        for(j=0;j<16;j++){
+            if((MSHR[j].valid == 1) && (MSHR[j].cacheAddr == memQ[0].addr)){
+                MSHR[j].done=1;
+            }
+        }
+        remove = 0;
+
+        pipe.cDone1 = 0;
+        pipe.dDone1 = 0;
+        pipe.dDone2 = 0;
+        pipe.aDone = 0;
+        pipe.datDone = 0;
+    }
+    else{
+        //case 2
+        //search the memQ for values equal to row buf
+        for (i=0; i<16; i++){
+            if((row_buf[memQ[i].bank] == memQ[i].row) && (memQ[i].valid == 1)){
+
+                if(schedulable(memQ[i].bank) == 0){
+                    remove = -2;
+                    continue;
+                }
+
+                qAddrLine(pipe.aDone);
+                //        if((pipe.addrLineBusy != 0))
+                //          return 1;
+                if(pipe.addrLineBusy == 0)
+                    pipe.aDone = 1;
+
+                qDRAM(memQ[i].bank,0,pipe.dDone1,pipe.dDone2,pipe.dDone3);
+                if((pipe.DRAMbusy[memQ[i].bank] != 0) && (pipe.dDone1 == 0))
+                    return 1;
+                pipe.dDone1 = 1;
+
+                qDataLine(pipe.datDone); 
+                if((pipe.dataLineBusy != 0))
+                    return 1;
+                pipe.datDone = 1;
+
+                memQ[i].done = 1;
+                for(j=0;j<16;j++)
+                    if(MSHR[j].cacheAddr == memQ[i].addr)
+                        MSHR[j].done=1;
+                remove = i;
+                
+                pipe.aDone = 0;
+                pipe.dDone1 = 0;
+                pipe.datDone = 0;
+                // break;
+            }
+        }
+    }
+    //case3
+    //misses for all memQ requests
+    if(remove == -1){
+        qComLine(0,pipe.cDone1,pipe.cDone2);
+        //if((pipe.comLineBusy != 0) && (cDone1 != 0))
+        //    return 1;
+        if(pipe.comLineBusy == 0)
+            pipe.cDone1 = 1;
+
+        qDRAM(memQ[0].bank,0,pipe.dDone1,pipe.dDone2,pipe.dDone3);
+        if((pipe.DRAMbusy[0] != 0) && (pipe.dDone1 == 0))
+            return 1;
+        pipe.dDone1 = 1;
+
+        qComLine(1,pipe.cDone1,pipe.cDone2);
+        //if((pipe.comLineBusy != 0) && (cDone2 !=0))
+        //    return 1;
+        if(pipe.comLineBusy == 0)
+            pipe.cDone2 = 1;
+
+        qDRAM(memQ[0].bank,1,pipe.dDone1,pipe.dDone2,pipe.dDone3);
+        if((pipe.DRAMbusy[0] != 0) && (pipe.dDone2 == 0))
+            return 1;
+        pipe.dDone2 = 1;
+
+        qAddrLine(pipe.aDone);
+        //if((pipe.addrLineBusy != 0))
+        //    return 1;
+        if(pipe.addrLineBusy == 0)
+            pipe.aDone = 1;
+
+        qDRAM(memQ[0].bank,2,pipe.dDone1,pipe.dDone2,pipe.dDone3);
+        if((pipe.DRAMbusy[0] != 0) && (pipe.dDone3 == 0))
+            return 1;
+        pipe.dDone3 = 1;
+
+        qDataLine(pipe.datDone); 
+        if((pipe.dataLineBusy != 0))
+            return 1;
+        pipe.datDone = 1;
+
+        row_buf[memQ[0].bank] = memQ[0].row;
+        memQ[0].done = 1;
+        for(j=0;j<16;j++)
+            if(MSHR[j].cacheAddr == memQ[0].addr)
+                MSHR[j].done=1;
+        remove = 0;
+        
+        pipe.cDone1 = 0;
+        pipe.cDone2 = 0;
+        pipe.dDone1 = 0;
+        pipe.dDone2 = 0;
+        pipe.dDone3 = 0;
+        pipe.aDone = 0;
+        pipe.datDone = 0;
+    }
+
+    //reorganize memQ
+    for (i = remove;i<14;i++)
+        memQ[i] = memQ[i+1];
+    memQ[15].valid = 0;
+    return 0;
+}
+
+void qComLine(uint8_t type, uint8_t done1, uint8_t done2){
+   if(((type==0)&&(done1==1))||
+      ((type==1)&&(done2==1)))
+       return;
+
+   pipe.comLineBusy+=1;
+   if (pipe.comLineBusy == 5)
+       pipe.comLineBusy = 0;
+}
+
+void qAddrLine(uint8_t done){
+   if (done == 1)
+       return;
+
+   pipe.addrLineBusy+=1;
+   if (pipe.addrLineBusy == 5)
+       pipe.addrLineBusy = 0;
+}
+
+void qDRAM(uint8_t bank, uint8_t type, uint8_t done1, uint8_t done2,
+                         uint8_t done3){
+    
+   if(((type==0)&&(done1==1))||
+      ((type==1)&&(done2==1))||
+      ((type==2)&&(done3==1)))
+       return;
+   
+   pipe.DRAMbusy[bank]+=1;
+   if (pipe.DRAMbusy[bank] == 101)
+       pipe.DRAMbusy[bank] = 0;
+}
+
+void qDataLine(uint8_t done){ 
+        pipe.cDone1 = 0;
+   if (done == 1)
+       return;
+
+   pipe.dataLineBusy+=1;
+   if (pipe.dataLineBusy == 51)
+       pipe.dataLineBusy = 0;
+}
+
+uint8_t schedulable(uint8_t bank){
+
+    if((pipe.comLineBusy == 0) && 
+        ((pipe.DRAMbusy[bank] == 0) || (pipe.DRAMbusy[bank] >= 96)) &&
+        ((pipe.addrLineBusy == 0) &&
+        ((pipe.dataLineBusy == 0) || (pipe.dataLineBusy >= 46))))
+        return 1;
+
+    return 0;
+}
+
+void stall_pipe(int stall_time, int8_t isInst){
+     if(isInst == 1){
+        if(instr_stall_count < stall_time){     
+            pipe.stall_inst = 1;
+            instr_stall_count++; 
+            return;
+        }
+        else{
+            pipe.stall_inst = 0;
+            instr_stall_count = 0;
+        }
+    }
+    else { 
+        if(data_stall_count < stall_time){     
+            pipe.stall_data = 1;
+            data_stall_count++; 
+            return;
+        }
+        else{
+            pipe.stall_data = 0;
+            data_stall_count = 0;
+        }
+    }
+}
+
 void cache_updateLRU(uint8_t set, int newHit, uint8_t isInst)
 {
     int i; 
@@ -913,13 +1361,21 @@ void cache_updateLRU(uint8_t set, int newHit, uint8_t isInst)
         }     
         instCache[set][newHit].R = 1;
     }
-    else{ 
+    else if (isInst == 0){ 
          for(i=0; i<8; i++){
             if((dataCache[set][i].R != 0) && (i != newHit)
                  && (dataCache[set][i].R <= dataCache[set][newHit].R))
                 dataCache[set][i].R++;
         }
         dataCache[set][newHit].R = 1;
+    }
+    else if (isInst == 2){ 
+         for(i=0; i<16; i++){
+            if((L2[set][i].R != 0) && (i != newHit)
+                 && (L2[set][i].R <= L2[set][newHit].R))
+                L2[set][i].R++;
+        }
+        L2[set][newHit].R = 1;
     }
 }
 
@@ -943,16 +1399,11 @@ void cache_write(uint32_t addr, uint32_t data)
     
     //If not in Cache
     //If NOT FOUND, stall
-    if(data_stall_count <50){     
-        pipe.stall_data = 1;
-        data_stall_count++; 
-        return ;
-    }
-    else{
-        pipe.stall_data = 0;
-        data_stall_count = 0;
-    }
-
+    L2_request(addr, 0);
+    if ((pipe.stall_inst == 1) || (pipe.stall_data == 1)
+        || (pipe.Dstayout == 1) || (pipe.Istayout == 1))
+        return;
+    
     //search for free location to store memory in 
     //and then adjust memory at this location
     for(i=0;i<8;i++){
@@ -980,13 +1431,6 @@ void cache_write(uint32_t addr, uint32_t data)
 
 uint32_t prediction(uint32_t branch_pc)
 {
-#ifdef DEBUG
-    printf("PREDICTION BEING MADE:\n\nbranchPC=0x%08x, brb[%d].target=0x%08x, pht[0x%x] = %d\n\n",
-               branch_pc, BTB_IDX(branch_pc),
-               btb[BTB_IDX(branch_pc)].target,
-               GSHARE(ghr,branch_pc),
-               pht[GSHARE(ghr,branch_pc)]);
-#endif
 
     if((btb[BTB_IDX(branch_pc)].tag != branch_pc) || 
             (btb[BTB_IDX(branch_pc)].valid == 0)){

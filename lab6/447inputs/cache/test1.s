@@ -1,8 +1,8 @@
 .text
     lui $s0, 0x1000 # data memory: 0x10000000
 
- #   lui $t0, 1 # loop count: 0x10000
-    ori $t0, $0, 100
+#    lui $t0, 1 # loop count: 0x10000
+    ori $t0, 100
 Loop:
     sll $t1, $t0, 2
     addu $t1, $t1, $s0

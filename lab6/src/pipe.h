@@ -96,7 +96,19 @@ typedef struct Pipe_State {
     /* place other information here as necessary */
     
     int stall_inst, stall_data;
+    int mem_request;
+    int comLineBusy;
+    int addrLineBusy;
+    int dataLineBusy;
+    int DRAMbusy [8];
+    uint8_t cDone1,cDone2,aDone, dDone1, dDone2, dDone3, datDone;
+
+    int curr_mshr;
+    uint8_t mem_ibusy,insertingI,mem_dbusy,insertingD;
+    uint8_t Dstayout,Istayout;
     uint32_t predicted_dest;
+    
+    
 } Pipe_State;
 
 typedef struct line_t{
@@ -106,6 +118,14 @@ typedef struct line_t{
 typedef struct buffer_t{
     uint32_t valid,tag,U,target;
 }buffer_t;
+
+typedef struct mshr_t{
+    uint32_t valid,cacheAddr, done;
+}mshr_t;
+
+typedef struct queue_t{
+    uint32_t valid,addr,rank, row, bank, isInst, done, stallTime;
+}queue_t;
 
 /* global variable -- pipeline state */
 extern Pipe_State pipe;
@@ -133,6 +153,17 @@ uint32_t cache_read (uint32_t addr, uint8_t isInst);
 void cache_updateLRU(uint8_t set, int newHit, uint8_t isInst);
 void cache_write(uint32_t addr, uint32_t data);
 
+void L2_request(uint32_t addr, uint8_t isInst);
+
+int checkDRAM(uint8_t isInst);
+void qComLine(uint8_t type, uint8_t done1, uint8_t done2);
+void qAddrLine(uint8_t done);
+void qDRAM(uint8_t bank, uint8_t type, uint8_t done1, uint8_t done2,
+                         uint8_t done3);
+void qDataLine(uint8_t done);
+uint8_t schedulable(uint8_t bank);
+
+void stall_pipe(int stall_time, int8_t isInst);
 uint32_t prediction(uint32_t branch_pc);
 void update_branch_predictions(uint32_t branch_pc, uint8_t taken, 
                                 uint8_t uncond, uint32_t target);
